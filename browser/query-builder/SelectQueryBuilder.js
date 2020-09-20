@@ -1054,6 +1054,10 @@ var SelectQueryBuilder = /** @class */ (function (_super) {
             var destinationTableAlias = joinAttr.alias.name;
             var appendedCondition = joinAttr.condition ? " AND (" + joinAttr.condition + ")" : "";
             var parentAlias = joinAttr.parentAlias;
+            if (joinAttr.metadata.deleteDateColumn && !_this.expressionMap.withDeleted) {
+                var deletedCondition = destinationTableAlias + "." + joinAttr.metadata.deleteDateColumn.propertyName + " IS NULL";
+                appendedCondition = appendedCondition + " AND (" + deletedCondition + ")";
+            }
             // if join was build without relation (e.g. without "post.category") then it means that we have direct
             // table to join, without junction table involved. This means we simply join direct table.
             if (!parentAlias || !relation) {
