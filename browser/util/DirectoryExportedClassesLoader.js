@@ -1,5 +1,6 @@
+import glob from "glob";
 import { PlatformTools } from "../platform/PlatformTools";
-import { EntitySchema } from "../index";
+import { EntitySchema } from "../entity-schema/EntitySchema";
 /**
  * Loads all exported classes from the given directory.
  */
@@ -21,7 +22,7 @@ export function importClassesFromDirectories(logger, directories, formats) {
         return allLoaded;
     }
     var allFiles = directories.reduce(function (allDirs, dir) {
-        return allDirs.concat(PlatformTools.load("glob").sync(PlatformTools.pathNormalize(dir)));
+        return allDirs.concat(glob.sync(PlatformTools.pathNormalize(dir)));
     }, []);
     if (directories.length > 0 && allFiles.length === 0) {
         logger.log(logLevel, classesNotFoundMessage + " \"" + directories + "\"");
@@ -34,7 +35,7 @@ export function importClassesFromDirectories(logger, directories, formats) {
         var dtsExtension = file.substring(file.length - 5, file.length);
         return formats.indexOf(PlatformTools.pathExtname(file)) !== -1 && dtsExtension !== ".d.ts";
     })
-        .map(function (file) { return PlatformTools.load(PlatformTools.pathResolve(file)); });
+        .map(function (file) { return require(PlatformTools.pathResolve(file)); });
     return loadFileClasses(dirs, []);
 }
 /**
@@ -43,11 +44,11 @@ export function importClassesFromDirectories(logger, directories, formats) {
 export function importJsonsFromDirectories(directories, format) {
     if (format === void 0) { format = ".json"; }
     var allFiles = directories.reduce(function (allDirs, dir) {
-        return allDirs.concat(PlatformTools.load("glob").sync(PlatformTools.pathNormalize(dir)));
+        return allDirs.concat(glob.sync(PlatformTools.pathNormalize(dir)));
     }, []);
     return allFiles
         .filter(function (file) { return PlatformTools.pathExtname(file) === format; })
-        .map(function (file) { return PlatformTools.load(PlatformTools.pathResolve(file)); });
+        .map(function (file) { return require(PlatformTools.pathResolve(file)); });
 }
 
 //# sourceMappingURL=DirectoryExportedClassesLoader.js.map

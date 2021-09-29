@@ -1,3 +1,4 @@
+
 import { ObjectLiteral } from "../common/ObjectLiteral";
 import { QueryBuilder } from "./QueryBuilder";
 import { ReadStream } from "../platform/PlatformTools";
@@ -5,15 +6,15 @@ import { SelectQuery } from "./SelectQuery";
 import { EntityMetadata } from "../metadata/EntityMetadata";
 import { OrderByCondition } from "../find-options/OrderByCondition";
 import { QueryExpressionMap } from "./QueryExpressionMap";
-import { ObjectType } from "../common/ObjectType";
+import { EntityTarget } from "../common/EntityTarget";
 import { QueryRunner } from "../query-runner/QueryRunner";
-import { WhereExpression } from "./WhereExpression";
+import { WhereExpressionBuilder } from "./WhereExpressionBuilder";
 import { Brackets } from "./Brackets";
 import { SelectQueryBuilderOption } from "./SelectQueryBuilderOption";
 /**
  * Allows to build complex sql queries in a fashion way and execute those queries.
  */
-export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> implements WhereExpression {
+export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> implements WhereExpressionBuilder {
     /**
      * Gets generated sql query without parameters being replaced.
      */
@@ -55,6 +56,11 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      */
     addSelect(selection: string[]): this;
     /**
+     * Set max execution time.
+     * @param milliseconds
+     */
+    maxExecutionTime(milliseconds: number): this;
+    /**
      * Sets whether the selection is DISTINCT.
      */
     distinct(distinct?: boolean): this;
@@ -73,7 +79,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * Also sets a main string alias of the selection data.
      * Removes all previously set from-s.
      */
-    from<T>(entityTarget: ObjectType<T> | string, aliasName: string): SelectQueryBuilder<T>;
+    from<T>(entityTarget: EntityTarget<T>, aliasName: string): SelectQueryBuilder<T>;
     /**
      * Specifies FROM which entity's table select/update/delete will be executed.
      * Also sets a main string alias of the selection data.
@@ -83,7 +89,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * Specifies FROM which entity's table select/update/delete will be executed.
      * Also sets a main string alias of the selection data.
      */
-    addFrom<T>(entityTarget: ObjectType<T> | string, aliasName: string): SelectQueryBuilder<T>;
+    addFrom<T>(entityTarget: EntityTarget<T>, aliasName: string): SelectQueryBuilder<T>;
     /**
      * INNER JOINs (without selection) given subquery.
      * You also need to specify an alias of the joined data.
@@ -177,7 +183,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * You also need to specify an alias of the joined data.
      * Optionally, you can add condition and parameters used in condition.
      */
-    leftJoinAndSelect(entity: Function | string, alias: string, condition: string, parameters?: ObjectLiteral): this;
+    leftJoinAndSelect(entity: Function | string, alias: string, condition?: string, parameters?: ObjectLiteral): this;
     /**
      * LEFT JOINs table and adds all selection properties to SELECT.
      * You also need to specify an alias of the joined data.
@@ -209,7 +215,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * You also need to specify an alias of the joined data.
      * Optionally, you can add condition and parameters used in condition.
      */
-    innerJoinAndMapMany(mapToProperty: string, entity: Function | string, alias: string, condition: string, parameters?: ObjectLiteral): this;
+    innerJoinAndMapMany(mapToProperty: string, entity: Function | string, alias: string, condition?: string, parameters?: ObjectLiteral): this;
     /**
      * INNER JOINs table, SELECTs the data returned by a join and MAPs all that data to some entity's property.
      * This is extremely useful when you want to select some data and map it to some virtual property.
@@ -217,7 +223,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * You also need to specify an alias of the joined data.
      * Optionally, you can add condition and parameters used in condition.
      */
-    innerJoinAndMapMany(mapToProperty: string, tableName: string, alias: string, condition: string, parameters?: ObjectLiteral): this;
+    innerJoinAndMapMany(mapToProperty: string, tableName: string, alias: string, condition?: string, parameters?: ObjectLiteral): this;
     /**
      * INNER JOINs given subquery, SELECTs the data returned by a join and MAPs all that data to some entity's property.
      * This is extremely useful when you want to select some data and map it to some virtual property.
@@ -243,7 +249,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * You also need to specify an alias of the joined data.
      * Optionally, you can add condition and parameters used in condition.
      */
-    innerJoinAndMapOne(mapToProperty: string, entity: Function | string, alias: string, condition: string, parameters?: ObjectLiteral): this;
+    innerJoinAndMapOne(mapToProperty: string, entity: Function | string, alias: string, condition?: string, parameters?: ObjectLiteral): this;
     /**
      * INNER JOINs table, SELECTs the data returned by a join and MAPs all that data to some entity's property.
      * This is extremely useful when you want to select some data and map it to some virtual property.
@@ -251,7 +257,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * You also need to specify an alias of the joined data.
      * Optionally, you can add condition and parameters used in condition.
      */
-    innerJoinAndMapOne(mapToProperty: string, tableName: string, alias: string, condition: string, parameters?: ObjectLiteral): this;
+    innerJoinAndMapOne(mapToProperty: string, tableName: string, alias: string, condition?: string, parameters?: ObjectLiteral): this;
     /**
      * LEFT JOINs given subquery, SELECTs the data returned by a join and MAPs all that data to some entity's property.
      * This is extremely useful when you want to select some data and map it to some virtual property.
@@ -277,7 +283,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * You also need to specify an alias of the joined data.
      * Optionally, you can add condition and parameters used in condition.
      */
-    leftJoinAndMapMany(mapToProperty: string, entity: Function | string, alias: string, condition: string, parameters?: ObjectLiteral): this;
+    leftJoinAndMapMany(mapToProperty: string, entity: Function | string, alias: string, condition?: string, parameters?: ObjectLiteral): this;
     /**
      * LEFT JOINs table, SELECTs the data returned by a join and MAPs all that data to some entity's property.
      * This is extremely useful when you want to select some data and map it to some virtual property.
@@ -285,7 +291,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * You also need to specify an alias of the joined data.
      * Optionally, you can add condition and parameters used in condition.
      */
-    leftJoinAndMapMany(mapToProperty: string, tableName: string, alias: string, condition: string, parameters?: ObjectLiteral): this;
+    leftJoinAndMapMany(mapToProperty: string, tableName: string, alias: string, condition?: string, parameters?: ObjectLiteral): this;
     /**
      * LEFT JOINs given subquery, SELECTs the data returned by a join and MAPs all that data to some entity's property.
      * This is extremely useful when you want to select some data and map it to some virtual property.
@@ -311,7 +317,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * You also need to specify an alias of the joined data.
      * Optionally, you can add condition and parameters used in condition.
      */
-    leftJoinAndMapOne(mapToProperty: string, entity: Function | string, alias: string, condition: string, parameters?: ObjectLiteral): this;
+    leftJoinAndMapOne(mapToProperty: string, entity: Function | string, alias: string, condition?: string, parameters?: ObjectLiteral): this;
     /**
      * LEFT JOINs table, SELECTs the data returned by a join and MAPs all that data to some entity's property.
      * This is extremely useful when you want to select some data and map it to some virtual property.
@@ -319,7 +325,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * You also need to specify an alias of the joined data.
      * Optionally, you can add condition and parameters used in condition.
      */
-    leftJoinAndMapOne(mapToProperty: string, tableName: string, alias: string, condition: string, parameters?: ObjectLiteral): this;
+    leftJoinAndMapOne(mapToProperty: string, tableName: string, alias: string, condition?: string, parameters?: ObjectLiteral): this;
     /**
      */
     /**
@@ -365,12 +371,12 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * Adds new AND WHERE condition in the query builder.
      * Additionally you can add parameters used in where expression.
      */
-    andWhere(where: string | Brackets | ((qb: this) => string), parameters?: ObjectLiteral): this;
+    andWhere(where: string | Brackets | ((qb: this) => string) | ObjectLiteral | ObjectLiteral[], parameters?: ObjectLiteral): this;
     /**
      * Adds new OR WHERE condition in the query builder.
      * Additionally you can add parameters used in where expression.
      */
-    orWhere(where: Brackets | string | ((qb: this) => string), parameters?: ObjectLiteral): this;
+    orWhere(where: Brackets | string | ((qb: this) => string) | ObjectLiteral | ObjectLiteral[], parameters?: ObjectLiteral): this;
     /**
      * Adds new AND WHERE with conditions for the given ids.
      *
@@ -480,15 +486,11 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
     /**
      * Sets locking mode.
      */
-    setLock(lockMode: "optimistic", lockVersion: number): this;
+    setLock(lockMode: "optimistic", lockVersion: number | Date): this;
     /**
      * Sets locking mode.
      */
-    setLock(lockMode: "optimistic", lockVersion: Date): this;
-    /**
-     * Sets locking mode.
-     */
-    setLock(lockMode: "pessimistic_read" | "pessimistic_write" | "dirty_read" | "pessimistic_partial_write" | "pessimistic_write_or_fail" | "for_no_key_update"): this;
+    setLock(lockMode: "pessimistic_read" | "pessimistic_write" | "dirty_read" | "pessimistic_partial_write" | "pessimistic_write_or_fail" | "for_no_key_update", lockVersion?: undefined, lockTables?: string[]): this;
     /**
      * Disables the global condition of "non-deleted" for the entity with delete date columns.
      */
@@ -496,7 +498,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
     /**
      * Gets first raw result returned by execution of generated query builder sql.
      */
-    getRawOne<T = any>(): Promise<T>;
+    getRawOne<T = any>(): Promise<T | undefined>;
     /**
      * Gets all raw results returned by execution of generated query builder sql.
      */
@@ -512,6 +514,10 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * Gets single entity returned by execution of generated query builder sql.
      */
     getOne(): Promise<Entity | undefined>;
+    /**
+     * Gets the first entity returned by execution of generated query builder sql or rejects the returned promise on error.
+     */
+    getOneOrFail(): Promise<Entity>;
     /**
      * Gets entities returned by execution of generated query builder sql.
      */
@@ -582,6 +588,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
     protected createHavingExpression(): string;
     protected buildEscapedEntityColumnSelects(aliasName: string, metadata: EntityMetadata): SelectQuery[];
     protected findEntityColumnSelects(aliasName: string, metadata: EntityMetadata): SelectQuery[];
+    private computeCountExpression;
     protected executeCountQuery(queryRunner: QueryRunner): Promise<number>;
     /**
      * Executes sql generated by query builder and returns object with raw results and entities created from them.

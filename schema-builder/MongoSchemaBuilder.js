@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MongoSchemaBuilder = void 0;
 var tslib_1 = require("tslib");
 var SqlInMemory_1 = require("../driver/SqlInMemory");
 /**
@@ -35,7 +36,7 @@ var MongoSchemaBuilder = /** @class */ (function () {
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        queryRunner = this.connection.driver.createQueryRunner();
+                        queryRunner = this.connection.createQueryRunner();
                         promises = [];
                         this.connection.entityMetadatas.forEach(function (metadata) {
                             metadata.indices.forEach(function (index) {

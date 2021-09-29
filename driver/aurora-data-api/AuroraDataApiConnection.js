@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuroraDataApiConnection = void 0;
 var tslib_1 = require("tslib");
 var Connection_1 = require("../../connection/Connection");
 /**
@@ -13,7 +14,6 @@ var AuroraDataApiConnection = /** @class */ (function (_super) {
         return _this;
     }
     AuroraDataApiConnection.prototype.createQueryRunner = function (mode) {
-        if (mode === void 0) { mode = "master"; }
         return this.queryRunnter;
     };
     return AuroraDataApiConnection;

@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.QueryExpressionMap = void 0;
 var tslib_1 = require("tslib");
 var Alias_1 = require("./Alias");
 var JoinAttribute_1 = require("./JoinAttribute");
 var RelationIdAttribute_1 = require("./relation-id/RelationIdAttribute");
 var RelationCountAttribute_1 = require("./relation-count/RelationCountAttribute");
+var error_1 = require("../error");
 /**
  * Contains all properties of the QueryBuilder that needs to be build a final query.
  */
@@ -33,6 +35,10 @@ var QueryExpressionMap = /** @class */ (function () {
          * Data needs to be SELECT-ed.
          */
         this.selects = [];
+        /**
+         * Max execution time in millisecond.
+         */
+        this.maxExecutionTime = 0;
         /**
          * Whether SELECT is DISTINCT.
          */
@@ -149,9 +155,16 @@ var QueryExpressionMap = /** @class */ (function () {
         this.useTransaction = false;
         /**
          * Extra parameters.
-         * Used in InsertQueryBuilder to avoid default parameters mechanizm and execute high performance insertions.
+         *
+         * @deprecated Use standard parameters instead
          */
         this.nativeParameters = {};
+        /**
+         * Items from an entity that have been locally generated & are recorded here for later use.
+         * Examples include the UUID generation when the database does not natively support it.
+         * These are included in the entity index order.
+         */
+        this.locallyGenerated = {};
     }
     Object.defineProperty(QueryExpressionMap.prototype, "allOrderBys", {
         // -------------------------------------------------------------------------
@@ -172,7 +185,7 @@ var QueryExpressionMap = /** @class */ (function () {
             }
             return this.orderBys;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     // -------------------------------------------------------------------------
@@ -222,7 +235,7 @@ var QueryExpressionMap = /** @class */ (function () {
     QueryExpressionMap.prototype.findAliasByName = function (aliasName) {
         var alias = this.aliases.find(function (alias) { return alias.name === aliasName; });
         if (!alias)
-            throw new Error("\"" + aliasName + "\" alias was not found. Maybe you forgot to join it?");
+            throw new error_1.TypeORMError("\"" + aliasName + "\" alias was not found. Maybe you forgot to join it?");
         return alias;
     };
     QueryExpressionMap.prototype.findColumnByAliasExpression = function (aliasExpression) {
@@ -238,13 +251,13 @@ var QueryExpressionMap = /** @class */ (function () {
          */
         get: function () {
             if (!this.mainAlias)
-                throw new Error("Entity to work with is not specified!"); // todo: better message
+                throw new error_1.TypeORMError("Entity to work with is not specified!"); // todo: better message
             var relationMetadata = this.mainAlias.metadata.findRelationWithPropertyPath(this.relationPropertyPath);
             if (!relationMetadata)
-                throw new Error("Relation " + this.relationPropertyPath + " was not found in entity " + this.mainAlias.name); // todo: better message
+                throw new error_1.TypeORMError("Relation " + this.relationPropertyPath + " was not found in entity " + this.mainAlias.name); // todo: better message
             return relationMetadata;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     /**
@@ -256,6 +269,7 @@ var QueryExpressionMap = /** @class */ (function () {
         var map = new QueryExpressionMap(this.connection);
         map.queryType = this.queryType;
         map.selects = this.selects.map(function (select) { return select; });
+        map.maxExecutionTime = this.maxExecutionTime;
         map.selectDistinct = this.selectDistinct;
         map.selectDistinctOn = this.selectDistinctOn;
         this.aliases.forEach(function (alias) { return map.aliases.push(new Alias_1.Alias(alias)); });
@@ -278,6 +292,7 @@ var QueryExpressionMap = /** @class */ (function () {
         map.take = this.take;
         map.lockMode = this.lockMode;
         map.lockVersion = this.lockVersion;
+        map.lockTables = this.lockTables;
         map.withDeleted = this.withDeleted;
         map.parameters = Object.assign({}, this.parameters);
         map.disableEscaping = this.disableEscaping;
@@ -296,6 +311,7 @@ var QueryExpressionMap = /** @class */ (function () {
         map.callListeners = this.callListeners;
         map.useTransaction = this.useTransaction;
         map.nativeParameters = Object.assign({}, this.nativeParameters);
+        map.comment = this.comment;
         return map;
     };
     return QueryExpressionMap;

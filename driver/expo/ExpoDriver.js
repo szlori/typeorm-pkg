@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ExpoDriver = void 0;
 var tslib_1 = require("tslib");
 var AbstractSqliteDriver_1 = require("../sqlite-abstract/AbstractSqliteDriver");
 var ExpoQueryRunner_1 = require("./ExpoQueryRunner");
@@ -49,7 +50,6 @@ var ExpoDriver = /** @class */ (function (_super) {
      * Creates a query runner used to execute database queries.
      */
     ExpoDriver.prototype.createQueryRunner = function (mode) {
-        if (mode === void 0) { mode = "master"; }
         if (!this.queryRunner)
             this.queryRunner = new ExpoQueryRunner_1.ExpoQueryRunner(this);
         return this.queryRunner;

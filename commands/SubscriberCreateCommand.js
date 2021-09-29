@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.SubscriberCreateCommand = void 0;
 var tslib_1 = require("tslib");
 var ConnectionOptionsReader_1 = require("../connection/ConnectionOptionsReader");
 var CommandUtils_1 = require("./CommandUtils");
-var chalk = require("chalk");
+var chalk_1 = tslib_1.__importDefault(require("chalk"));
 /**
  * Generates a new subscriber.
  */
@@ -55,21 +56,24 @@ var SubscriberCreateCommand = /** @class */ (function () {
                         return [4 /*yield*/, connectionOptionsReader.get(args.connection)];
                     case 2:
                         connectionOptions = _a.sent();
-                        directory = connectionOptions.cli ? connectionOptions.cli.subscribersDir : undefined;
+                        directory = connectionOptions.cli ? (connectionOptions.cli.subscribersDir || "") : "";
                         return [3 /*break*/, 4];
                     case 3:
                         err_1 = _a.sent();
                         return [3 /*break*/, 4];
                     case 4:
-                        path = process.cwd() + "/" + (directory ? (directory + "/") : "") + filename;
+                        if (directory && !directory.startsWith("/")) {
+                            directory = process.cwd() + "/" + directory;
+                        }
+                        path = (directory ? (directory + "/") : "") + filename;
                         return [4 /*yield*/, CommandUtils_1.CommandUtils.createFile(path, fileContent)];
                     case 5:
                         _a.sent();
-                        console.log(chalk.green("Subscriber " + chalk.blue(path) + " has been created successfully."));
+                        console.log(chalk_1.default.green("Subscriber " + chalk_1.default.blue(path) + " has been created successfully."));
                         return [3 /*break*/, 7];
                     case 6:
                         err_2 = _a.sent();
-                        console.log(chalk.black.bgRed("Error during subscriber creation:"));
+                        console.log(chalk_1.default.black.bgRed("Error during subscriber creation:"));
                         console.error(err_2);
                         process.exit(1);
                         return [3 /*break*/, 7];

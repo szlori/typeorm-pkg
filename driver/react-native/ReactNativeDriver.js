@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.ReactNativeDriver = void 0;
 var tslib_1 = require("tslib");
 var AbstractSqliteDriver_1 = require("../sqlite-abstract/AbstractSqliteDriver");
 var ReactNativeQueryRunner_1 = require("./ReactNativeQueryRunner");
@@ -43,7 +44,6 @@ var ReactNativeDriver = /** @class */ (function (_super) {
      * Creates a query runner used to execute database queries.
      */
     ReactNativeDriver.prototype.createQueryRunner = function (mode) {
-        if (mode === void 0) { mode = "master"; }
         if (!this.queryRunner)
             this.queryRunner = new ReactNativeQueryRunner_1.ReactNativeQueryRunner(this);
         return this.queryRunner;

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.DbQueryResultCache = void 0;
 var tslib_1 = require("tslib");
 var OracleDriver_1 = require("../driver/oracle/OracleDriver");
 var MssqlParameter_1 = require("../driver/sqlserver/MssqlParameter");
@@ -14,10 +15,13 @@ var DbQueryResultCache = /** @class */ (function () {
     // -------------------------------------------------------------------------
     function DbQueryResultCache(connection) {
         this.connection = connection;
-        var options = this.connection.driver.options;
+        var schema = this.connection.driver.options.schema;
+        var database = this.connection.driver.database;
         var cacheOptions = typeof this.connection.options.cache === "object" ? this.connection.options.cache : {};
         var cacheTableName = cacheOptions.tableName || "query-result-cache";
-        this.queryResultCacheTable = this.connection.driver.buildTableName(cacheTableName, options.schema, options.database);
+        this.queryResultCacheDatabase = database;
+        this.queryResultCacheSchema = schema;
+        this.queryResultCacheTable = this.connection.driver.buildTableName(cacheTableName, schema, database);
     }
     // -------------------------------------------------------------------------
     // Public Methods
@@ -59,6 +63,8 @@ var DbQueryResultCache = /** @class */ (function () {
                         if (tableExist)
                             return [2 /*return*/];
                         return [4 /*yield*/, queryRunner.createTable(new Table_1.Table({
+                                database: this.queryResultCacheDatabase,
+                                schema: this.queryResultCacheSchema,
                                 name: this.queryResultCacheTable,
                                 columns: [
                                     {
@@ -245,7 +251,7 @@ var DbQueryResultCache = /** @class */ (function () {
     DbQueryResultCache.prototype.getQueryRunner = function (queryRunner) {
         if (queryRunner)
             return queryRunner;
-        return this.connection.createQueryRunner("master");
+        return this.connection.createQueryRunner();
     };
     return DbQueryResultCache;
 }());

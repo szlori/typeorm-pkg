@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MigrationExecutor = void 0;
 var tslib_1 = require("tslib");
 var Table_1 = require("../schema-builder/table/Table");
 var Migration_1 = require("./Migration");
-var PromiseUtils_1 = require("../util/PromiseUtils");
 var SqlServerDriver_1 = require("../driver/sqlserver/SqlServerDriver");
 var MssqlParameter_1 = require("../driver/sqlserver/MssqlParameter");
 var MongoDriver_1 = require("../driver/mongodb/MongoDriver");
+var error_1 = require("../error");
 /**
  * Executes migrations: runs pending and reverts previously executed migrations.
  */
@@ -27,9 +28,12 @@ var MigrationExecutor = /** @class */ (function () {
          *   each: each migration is run in a separate transaction
          */
         this.transaction = "all";
-        var options = this.connection.driver.options;
+        var schema = this.connection.driver.options.schema;
+        var database = this.connection.driver.database;
+        this.migrationsDatabase = database;
+        this.migrationsSchema = schema;
         this.migrationsTableName = connection.options.migrationsTableName || "migrations";
-        this.migrationsTable = this.connection.driver.buildTableName(this.migrationsTableName, options.schema, options.database);
+        this.migrationsTable = this.connection.driver.buildTableName(this.migrationsTableName, schema, database);
     }
     // -------------------------------------------------------------------------
     // Public Methods
@@ -146,12 +150,13 @@ var MigrationExecutor = /** @class */ (function () {
      */
     MigrationExecutor.prototype.showMigrations = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var e_1, _a, hasUnappliedMigrations, queryRunner, executedMigrations, allMigrations, _loop_1, this_1, allMigrations_1, allMigrations_1_1, migration;
+            var hasUnappliedMigrations, queryRunner, executedMigrations, allMigrations, _loop_1, this_1, allMigrations_1, allMigrations_1_1, migration;
+            var e_1, _a;
             return tslib_1.__generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
                         hasUnappliedMigrations = false;
-                        queryRunner = this.queryRunner || this.connection.createQueryRunner("master");
+                        queryRunner = this.queryRunner || this.connection.createQueryRunner();
                         // create migrations table if its not created yet
                         return [4 /*yield*/, this.createMigrationsTableIfNotExist(queryRunner)];
                     case 1:
@@ -201,20 +206,21 @@ var MigrationExecutor = /** @class */ (function () {
      */
     MigrationExecutor.prototype.executePendingMigrations = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var queryRunner, executedMigrations, lastTimeExecutedMigration, allMigrations, successMigrations, pendingMigrations, transactionStartedByUs, err_1, rollbackError_1;
+            var queryRunner, executedMigrations, lastTimeExecutedMigration, allMigrations, successMigrations, pendingMigrations, transactionStartedByUs, _loop_2, this_2, pendingMigrations_1, pendingMigrations_1_1, migration, e_2_1, err_1, rollbackError_1;
+            var e_2, _a;
             var _this = this;
-            return tslib_1.__generator(this, function (_a) {
-                switch (_a.label) {
+            return tslib_1.__generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
-                        queryRunner = this.queryRunner || this.connection.createQueryRunner("master");
+                        queryRunner = this.queryRunner || this.connection.createQueryRunner();
                         // create migrations table if its not created yet
                         return [4 /*yield*/, this.createMigrationsTableIfNotExist(queryRunner)];
                     case 1:
                         // create migrations table if its not created yet
-                        _a.sent();
+                        _b.sent();
                         return [4 /*yield*/, this.loadExecutedMigrations(queryRunner)];
                     case 2:
-                        executedMigrations = _a.sent();
+                        executedMigrations = _b.sent();
                         lastTimeExecutedMigration = this.getLatestTimestampMigration(executedMigrations);
                         allMigrations = this.getMigrations();
                         successMigrations = [];
@@ -225,7 +231,7 @@ var MigrationExecutor = /** @class */ (function () {
                                 return false;
                             // migration is new and not executed. now check if its timestamp is correct
                             // if (lastTimeExecutedMigration && migration.timestamp < lastTimeExecutedMigration.timestamp)
-                            //     throw new Error(`New migration found: ${migration.name}, however this migration's timestamp is not valid. Migration's timestamp should not be older then migrations already executed in the database.`);
+                            //     throw new TypeORMError(`New migration found: ${migration.name}, however this migration's timestamp is not valid. Migration's timestamp should not be older then migrations already executed in the database.`);
                             // every check is passed means that migration was not run yet and we need to run it
                             return true;
                         });
@@ -234,8 +240,8 @@ var MigrationExecutor = /** @class */ (function () {
                         if (!!this.queryRunner) return [3 /*break*/, 4];
                         return [4 /*yield*/, queryRunner.release()];
                     case 3:
-                        _a.sent();
-                        _a.label = 4;
+                        _b.sent();
+                        _b.label = 4;
                     case 4: return [2 /*return*/, []];
                     case 5:
                         // log information about migration execution
@@ -248,76 +254,104 @@ var MigrationExecutor = /** @class */ (function () {
                         if (!(this.transaction === "all" && !queryRunner.isTransactionActive)) return [3 /*break*/, 7];
                         return [4 /*yield*/, queryRunner.startTransaction()];
                     case 6:
-                        _a.sent();
+                        _b.sent();
                         transactionStartedByUs = true;
-                        _a.label = 7;
+                        _b.label = 7;
                     case 7:
-                        _a.trys.push([7, 11, 16, 19]);
-                        return [4 /*yield*/, PromiseUtils_1.PromiseUtils.runInSequence(pendingMigrations, function (migration) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
-                                var _this = this;
-                                return tslib_1.__generator(this, function (_a) {
-                                    switch (_a.label) {
-                                        case 0:
-                                            if (!(this.transaction === "each" && !queryRunner.isTransactionActive)) return [3 /*break*/, 2];
-                                            return [4 /*yield*/, queryRunner.startTransaction()];
-                                        case 1:
-                                            _a.sent();
-                                            transactionStartedByUs = true;
-                                            _a.label = 2;
-                                        case 2: return [2 /*return*/, migration.instance.up(queryRunner)
-                                                .then(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
-                                                return tslib_1.__generator(this, function (_a) {
-                                                    switch (_a.label) {
-                                                        case 0: // now when migration is executed we need to insert record about it into the database
-                                                        return [4 /*yield*/, this.insertExecutedMigration(queryRunner, migration)];
-                                                        case 1:
-                                                            _a.sent();
-                                                            if (!(this.transaction === "each" && transactionStartedByUs)) return [3 /*break*/, 3];
-                                                            return [4 /*yield*/, queryRunner.commitTransaction()];
-                                                        case 2:
-                                                            _a.sent();
-                                                            _a.label = 3;
-                                                        case 3: return [2 /*return*/];
-                                                    }
-                                                });
-                                            }); })
-                                                .then(function () {
-                                                successMigrations.push(migration);
-                                                _this.connection.logger.logSchemaBuild("Migration " + migration.name + " has been executed successfully.");
-                                            })];
-                                    }
-                                });
-                            }); })];
+                        _b.trys.push([7, 18, 23, 26]);
+                        _loop_2 = function (migration) {
+                            return tslib_1.__generator(this, function (_c) {
+                                switch (_c.label) {
+                                    case 0:
+                                        if (!(this_2.transaction === "each" && !queryRunner.isTransactionActive)) return [3 /*break*/, 2];
+                                        return [4 /*yield*/, queryRunner.startTransaction()];
+                                    case 1:
+                                        _c.sent();
+                                        transactionStartedByUs = true;
+                                        _c.label = 2;
+                                    case 2: return [4 /*yield*/, migration.instance.up(queryRunner)
+                                            .then(function () { return tslib_1.__awaiter(_this, void 0, void 0, function () {
+                                            return tslib_1.__generator(this, function (_a) {
+                                                switch (_a.label) {
+                                                    case 0: // now when migration is executed we need to insert record about it into the database
+                                                    return [4 /*yield*/, this.insertExecutedMigration(queryRunner, migration)];
+                                                    case 1:
+                                                        _a.sent();
+                                                        if (!(this.transaction === "each" && transactionStartedByUs)) return [3 /*break*/, 3];
+                                                        return [4 /*yield*/, queryRunner.commitTransaction()];
+                                                    case 2:
+                                                        _a.sent();
+                                                        _a.label = 3;
+                                                    case 3: return [2 /*return*/];
+                                                }
+                                            });
+                                        }); })
+                                            .then(function () {
+                                            successMigrations.push(migration);
+                                            _this.connection.logger.logSchemaBuild("Migration " + migration.name + " has been executed successfully.");
+                                        })];
+                                    case 3:
+                                        _c.sent();
+                                        return [2 /*return*/];
+                                }
+                            });
+                        };
+                        this_2 = this;
+                        _b.label = 8;
                     case 8:
-                        _a.sent();
-                        if (!(this.transaction === "all" && transactionStartedByUs)) return [3 /*break*/, 10];
-                        return [4 /*yield*/, queryRunner.commitTransaction()];
+                        _b.trys.push([8, 13, 14, 15]);
+                        pendingMigrations_1 = tslib_1.__values(pendingMigrations), pendingMigrations_1_1 = pendingMigrations_1.next();
+                        _b.label = 9;
                     case 9:
-                        _a.sent();
-                        _a.label = 10;
-                    case 10: return [3 /*break*/, 19];
+                        if (!!pendingMigrations_1_1.done) return [3 /*break*/, 12];
+                        migration = pendingMigrations_1_1.value;
+                        return [5 /*yield**/, _loop_2(migration)];
+                    case 10:
+                        _b.sent();
+                        _b.label = 11;
                     case 11:
-                        err_1 = _a.sent();
-                        if (!transactionStartedByUs) return [3 /*break*/, 15];
-                        _a.label = 12;
-                    case 12:
-                        _a.trys.push([12, 14, , 15]);
-                        return [4 /*yield*/, queryRunner.rollbackTransaction()];
+                        pendingMigrations_1_1 = pendingMigrations_1.next();
+                        return [3 /*break*/, 9];
+                    case 12: return [3 /*break*/, 15];
                     case 13:
-                        _a.sent();
+                        e_2_1 = _b.sent();
+                        e_2 = { error: e_2_1 };
                         return [3 /*break*/, 15];
                     case 14:
-                        rollbackError_1 = _a.sent();
-                        return [3 /*break*/, 15];
-                    case 15: throw err_1;
+                        try {
+                            if (pendingMigrations_1_1 && !pendingMigrations_1_1.done && (_a = pendingMigrations_1.return)) _a.call(pendingMigrations_1);
+                        }
+                        finally { if (e_2) throw e_2.error; }
+                        return [7 /*endfinally*/];
+                    case 15:
+                        if (!(this.transaction === "all" && transactionStartedByUs)) return [3 /*break*/, 17];
+                        return [4 /*yield*/, queryRunner.commitTransaction()];
                     case 16:
-                        if (!!this.queryRunner) return [3 /*break*/, 18];
+                        _b.sent();
+                        _b.label = 17;
+                    case 17: return [3 /*break*/, 26];
+                    case 18:
+                        err_1 = _b.sent();
+                        if (!transactionStartedByUs) return [3 /*break*/, 22];
+                        _b.label = 19;
+                    case 19:
+                        _b.trys.push([19, 21, , 22]);
+                        return [4 /*yield*/, queryRunner.rollbackTransaction()];
+                    case 20:
+                        _b.sent();
+                        return [3 /*break*/, 22];
+                    case 21:
+                        rollbackError_1 = _b.sent();
+                        return [3 /*break*/, 22];
+                    case 22: throw err_1;
+                    case 23:
+                        if (!!this.queryRunner) return [3 /*break*/, 25];
                         return [4 /*yield*/, queryRunner.release()];
-                    case 17:
-                        _a.sent();
-                        _a.label = 18;
-                    case 18: return [7 /*endfinally*/];
-                    case 19: return [2 /*return*/, successMigrations];
+                    case 24:
+                        _b.sent();
+                        _b.label = 25;
+                    case 25: return [7 /*endfinally*/];
+                    case 26: return [2 /*return*/, successMigrations];
                 }
             });
         });
@@ -331,7 +365,7 @@ var MigrationExecutor = /** @class */ (function () {
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        queryRunner = this.queryRunner || this.connection.createQueryRunner("master");
+                        queryRunner = this.queryRunner || this.connection.createQueryRunner();
                         // create migrations table if its not created yet
                         return [4 /*yield*/, this.createMigrationsTableIfNotExist(queryRunner)];
                     case 1:
@@ -350,7 +384,7 @@ var MigrationExecutor = /** @class */ (function () {
                         migrationToRevert = allMigrations.find(function (migration) { return migration.name === lastTimeExecutedMigration.name; });
                         // if no migrations found in the database then nothing to revert
                         if (!migrationToRevert)
-                            throw new Error("No migration " + lastTimeExecutedMigration.name + " was found in the source code. Make sure you have this migration in your codebase and its included in the connection options.");
+                            throw new error_1.TypeORMError("No migration " + lastTimeExecutedMigration.name + " was found in the source code. Make sure you have this migration in your codebase and its included in the connection options.");
                         // log information about migration execution
                         this.connection.logger.logSchemaBuild(executedMigrations.length + " migrations are already loaded in the database.");
                         this.connection.logger.logSchemaBuild(lastTimeExecutedMigration.name + " is the last executed migration. It was executed on " + new Date(lastTimeExecutedMigration.timestamp).toString() + ".");
@@ -424,6 +458,8 @@ var MigrationExecutor = /** @class */ (function () {
                         tableExist = _a.sent();
                         if (!!tableExist) return [3 /*break*/, 3];
                         return [4 /*yield*/, queryRunner.createTable(new Table_1.Table({
+                                database: this.migrationsDatabase,
+                                schema: this.migrationsSchema,
                                 name: this.migrationsTable,
                                 columns: [
                                     {
@@ -496,7 +532,7 @@ var MigrationExecutor = /** @class */ (function () {
             var migrationClassName = migration.name || migration.constructor.name;
             var migrationTimestamp = parseInt(migrationClassName.substr(-13), 10);
             if (!migrationTimestamp || isNaN(migrationTimestamp)) {
-                throw new Error(migrationClassName + " migration name is wrong. Migration class name should have a JavaScript timestamp appended.");
+                throw new error_1.TypeORMError(migrationClassName + " migration name is wrong. Migration class name should have a JavaScript timestamp appended.");
             }
             return new Migration_1.Migration(undefined, migrationTimestamp, migrationClassName, migration);
         });
@@ -545,7 +581,7 @@ var MigrationExecutor = /** @class */ (function () {
                         }
                         if (!(this.connection.driver instanceof MongoDriver_1.MongoDriver)) return [3 /*break*/, 2];
                         mongoRunner = queryRunner;
-                        return [4 /*yield*/, mongoRunner.databaseConnection.db(this.connection.driver.database).collection(this.migrationsTableName).insert(values)];
+                        return [4 /*yield*/, mongoRunner.databaseConnection.db(this.connection.driver.database).collection(this.migrationsTableName).insertOne(values)];
                     case 1:
                         _a.sent();
                         return [3 /*break*/, 4];
@@ -609,7 +645,7 @@ var MigrationExecutor = /** @class */ (function () {
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        queryRunner = this.queryRunner || this.connection.createQueryRunner("master");
+                        queryRunner = this.queryRunner || this.connection.createQueryRunner();
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, , 2, 5]);

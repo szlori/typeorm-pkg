@@ -1,5 +1,5 @@
 import { Repository } from "./Repository";
-import { FindConditions } from "../index";
+import { FindConditions } from "../find-options/FindConditions";
 import { DeepPartial } from "../common/DeepPartial";
 import { SaveOptions } from "./SaveOptions";
 import { FindOneOptions } from "../find-options/FindOneOptions";
@@ -60,7 +60,7 @@ export declare class BaseEntity {
      * If this repository manages entity from schema,
      * then it returns a name of that schema instead.
      */
-    static readonly target: Function | string;
+    static get target(): Function | string;
     /**
      * Checks entity has an id.
      * If entity composite compose ids, it will check them all.

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var __1 = require("../../");
+exports.ViewEntity = void 0;
+var globals_1 = require("../../globals");
 /**
  * This decorator is used to mark classes that will be an entity view.
  * Database schema will be created for all classes decorated with it, and Repository can be retrieved and used for it.
@@ -9,7 +10,7 @@ function ViewEntity(nameOrOptions, maybeOptions) {
     var options = (typeof nameOrOptions === "object" ? nameOrOptions : maybeOptions) || {};
     var name = typeof nameOrOptions === "string" ? nameOrOptions : options.name;
     return function (target) {
-        __1.getMetadataArgsStorage().tables.push({
+        globals_1.getMetadataArgsStorage().tables.push({
             target: target,
             name: name,
             expression: options.expression,

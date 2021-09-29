@@ -1,4 +1,4 @@
-import * as tslib_1 from "tslib";
+import { __awaiter, __generator } from "tslib";
 import { OracleDriver } from "../driver/oracle/OracleDriver";
 import { MssqlParameter } from "../driver/sqlserver/MssqlParameter";
 import { SqlServerDriver } from "../driver/sqlserver/SqlServerDriver";
@@ -12,10 +12,13 @@ var DbQueryResultCache = /** @class */ (function () {
     // -------------------------------------------------------------------------
     function DbQueryResultCache(connection) {
         this.connection = connection;
-        var options = this.connection.driver.options;
+        var schema = this.connection.driver.options.schema;
+        var database = this.connection.driver.database;
         var cacheOptions = typeof this.connection.options.cache === "object" ? this.connection.options.cache : {};
         var cacheTableName = cacheOptions.tableName || "query-result-cache";
-        this.queryResultCacheTable = this.connection.driver.buildTableName(cacheTableName, options.schema, options.database);
+        this.queryResultCacheDatabase = database;
+        this.queryResultCacheSchema = schema;
+        this.queryResultCacheTable = this.connection.driver.buildTableName(cacheTableName, schema, database);
     }
     // -------------------------------------------------------------------------
     // Public Methods
@@ -24,8 +27,8 @@ var DbQueryResultCache = /** @class */ (function () {
      * Creates a connection with given cache provider.
      */
     DbQueryResultCache.prototype.connect = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            return tslib_1.__generator(this, function (_a) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
                 return [2 /*return*/];
             });
         });
@@ -34,8 +37,8 @@ var DbQueryResultCache = /** @class */ (function () {
      * Disconnects with given cache provider.
      */
     DbQueryResultCache.prototype.disconnect = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            return tslib_1.__generator(this, function (_a) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
                 return [2 /*return*/];
             });
         });
@@ -44,9 +47,9 @@ var DbQueryResultCache = /** @class */ (function () {
      * Creates table for storing cache if it does not exist yet.
      */
     DbQueryResultCache.prototype.synchronize = function (queryRunner) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var driver, tableExist;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         queryRunner = this.getQueryRunner(queryRunner);
@@ -57,6 +60,8 @@ var DbQueryResultCache = /** @class */ (function () {
                         if (tableExist)
                             return [2 /*return*/];
                         return [4 /*yield*/, queryRunner.createTable(new Table({
+                                database: this.queryResultCacheDatabase,
+                                schema: this.queryResultCacheSchema,
                                 name: this.queryResultCacheTable,
                                 columns: [
                                     {
@@ -145,9 +150,9 @@ var DbQueryResultCache = /** @class */ (function () {
      * Stores given query result in the cache.
      */
     DbQueryResultCache.prototype.storeInCache = function (options, savedCache, queryRunner) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var insertedValues, qb, qb;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         queryRunner = this.getQueryRunner(queryRunner);
@@ -206,8 +211,8 @@ var DbQueryResultCache = /** @class */ (function () {
      * Clears everything stored in the cache.
      */
     DbQueryResultCache.prototype.clear = function (queryRunner) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            return tslib_1.__generator(this, function (_a) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
                 return [2 /*return*/, this.getQueryRunner(queryRunner).clearTable(this.queryResultCacheTable)];
             });
         });
@@ -216,9 +221,9 @@ var DbQueryResultCache = /** @class */ (function () {
      * Removes all cached results by given identifiers from cache.
      */
     DbQueryResultCache.prototype.remove = function (identifiers, queryRunner) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var _this = this;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, Promise.all(identifiers.map(function (identifier) {
                             var qb = _this.getQueryRunner(queryRunner).manager.createQueryBuilder();
@@ -243,7 +248,7 @@ var DbQueryResultCache = /** @class */ (function () {
     DbQueryResultCache.prototype.getQueryRunner = function (queryRunner) {
         if (queryRunner)
             return queryRunner;
-        return this.connection.createQueryRunner("master");
+        return this.connection.createQueryRunner();
     };
     return DbQueryResultCache;
 }());

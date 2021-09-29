@@ -87,6 +87,10 @@ export interface BaseConnectionOptions {
      */
     readonly entityPrefix?: string;
     /**
+     * When creating new Entity instances, skip all constructors when true.
+     */
+    readonly entitySkipConstructor?: boolean;
+    /**
      * Extra connection options to be passed to the underlying driver.
      *
      * todo: deprecate this and move all database-specific types into hts own connection options object.
@@ -126,6 +130,10 @@ export interface BaseConnectionOptions {
          * Default value is 1000 which is equivalent to 1 second.
          */
         readonly duration?: number;
+        /**
+         * Used to specify if cache errors should be ignored, and pass through the call to the Database.
+         */
+        readonly ignoreErrors?: boolean;
     };
     /**
      * CLI settings.

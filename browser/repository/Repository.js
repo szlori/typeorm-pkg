@@ -1,4 +1,4 @@
-import * as tslib_1 from "tslib";
+import { __read, __spreadArray } from "tslib";
 /**
  * Repository is supposed to work with your entity objects. Find entities, insert, update, delete, etc.
  */
@@ -23,7 +23,7 @@ var Repository = /** @class */ (function () {
         get: function () {
             return this.metadata.target;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     /**
@@ -50,12 +50,12 @@ var Repository = /** @class */ (function () {
      * Merges multiple entities (or entity-like objects) into a given entity.
      */
     Repository.prototype.merge = function (mergeIntoEntity) {
+        var _a;
         var entityLikes = [];
         for (var _i = 1; _i < arguments.length; _i++) {
             entityLikes[_i - 1] = arguments[_i];
         }
-        var _a;
-        return (_a = this.manager).merge.apply(_a, tslib_1.__spread([this.metadata.target, mergeIntoEntity], entityLikes));
+        return (_a = this.manager).merge.apply(_a, __spreadArray([this.metadata.target, mergeIntoEntity], __read(entityLikes)));
     };
     /**
      * Creates a new entity from the given plain javascript object. If entity already exist in the database, then

@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MigrationShowCommand = void 0;
 var tslib_1 = require("tslib");
-var index_1 = require("../index");
+var globals_1 = require("../globals");
 var ConnectionOptionsReader_1 = require("../connection/ConnectionOptionsReader");
 var process = tslib_1.__importStar(require("process"));
-var chalk = require("chalk");
+var chalk_1 = tslib_1.__importDefault(require("chalk"));
 /**
  * Runs migration command.
  */
@@ -50,7 +51,7 @@ var MigrationShowCommand = /** @class */ (function () {
                             dropSchema: false,
                             logging: ["query", "error", "schema"]
                         });
-                        return [4 /*yield*/, index_1.createConnection(connectionOptions)];
+                        return [4 /*yield*/, globals_1.createConnection(connectionOptions)];
                     case 3:
                         connection = _a.sent();
                         return [4 /*yield*/, connection.showMigrations()];
@@ -70,7 +71,7 @@ var MigrationShowCommand = /** @class */ (function () {
                         _a.sent();
                         _a.label = 8;
                     case 8:
-                        console.log(chalk.black.bgRed("Error during migration show:"));
+                        console.log(chalk_1.default.black.bgRed("Error during migration show:"));
                         console.error(err_1);
                         process.exit(1);
                         return [3 /*break*/, 9];

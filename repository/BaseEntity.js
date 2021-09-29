@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.BaseEntity = void 0;
 var tslib_1 = require("tslib");
-var index_1 = require("../index");
+var globals_1 = require("../globals");
 var ObjectUtils_1 = require("../util/ObjectUtils");
 /**
  * Base abstract entity for all entities, used in ActiveRecord patterns.
@@ -76,7 +77,7 @@ var BaseEntity = /** @class */ (function () {
      * Gets current entity's Repository.
      */
     BaseEntity.getRepository = function () {
-        var connection = this.usedConnection || index_1.getConnection();
+        var connection = this.usedConnection || globals_1.getConnection();
         return connection.getRepository(this);
     };
     Object.defineProperty(BaseEntity, "target", {
@@ -88,7 +89,7 @@ var BaseEntity = /** @class */ (function () {
         get: function () {
             return this.getRepository().target;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     /**
@@ -121,12 +122,12 @@ var BaseEntity = /** @class */ (function () {
      * Merges multiple entities (or entity-like objects) into a given entity.
      */
     BaseEntity.merge = function (mergeIntoEntity) {
+        var _a;
         var entityLikes = [];
         for (var _i = 1; _i < arguments.length; _i++) {
             entityLikes[_i - 1] = arguments[_i];
         }
-        var _a;
-        return (_a = this.getRepository()).merge.apply(_a, tslib_1.__spread([mergeIntoEntity], entityLikes));
+        return (_a = this.getRepository()).merge.apply(_a, tslib_1.__spreadArray([mergeIntoEntity], tslib_1.__read(entityLikes)));
     };
     /**
      * Creates a new entity from the given plain javascript object. If entity already exist in the database, then

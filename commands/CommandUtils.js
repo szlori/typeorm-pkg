@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.CommandUtils = void 0;
 var tslib_1 = require("tslib");
 var fs = tslib_1.__importStar(require("fs"));
 var path = tslib_1.__importStar(require("path"));
-var mkdirp = require("mkdirp");
+var mkdirp_1 = tslib_1.__importDefault(require("mkdirp"));
 /**
  * Command line utils functions.
  */
@@ -14,7 +15,7 @@ var CommandUtils = /** @class */ (function () {
      * Creates directories recursively.
      */
     CommandUtils.createDirectories = function (directory) {
-        return mkdirp(directory);
+        return mkdirp_1.default(directory);
     };
     /**
      * Creates a file with the given content in the given path.

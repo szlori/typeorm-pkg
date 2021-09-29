@@ -1,4 +1,4 @@
-import * as tslib_1 from "tslib";
+import { __awaiter, __generator, __values } from "tslib";
 import { DefaultNamingStrategy } from "../naming-strategy/DefaultNamingStrategy";
 import { CannotExecuteNotConnectedError } from "../error/CannotExecuteNotConnectedError";
 import { CannotConnectAlreadyConnectedError } from "../error/CannotConnectAlreadyConnectedError";
@@ -16,14 +16,12 @@ import { LoggerFactory } from "../logger/LoggerFactory";
 import { QueryResultCacheFactory } from "../cache/QueryResultCacheFactory";
 import { SqljsEntityManager } from "../entity-manager/SqljsEntityManager";
 import { RelationLoader } from "../query-builder/RelationLoader";
-import { RelationIdLoader } from "../query-builder/RelationIdLoader";
-import { EntitySchema } from "../";
+import { EntitySchema } from "../entity-schema/EntitySchema";
 import { SqlServerDriver } from "../driver/sqlserver/SqlServerDriver";
 import { MysqlDriver } from "../driver/mysql/MysqlDriver";
 import { ObjectUtils } from "../util/ObjectUtils";
-import { PromiseUtils } from "../";
 import { AuroraDataApiDriver } from "../driver/aurora-data-api/AuroraDataApiDriver";
-import { DriverUtils } from "../driver/DriverUtils";
+import { TypeORMError } from "../error/TypeORMError";
 /**
  * Connection is a single database ORM connection to a specific database.
  * Its not required to be a database connection, depend on database type it can create connection pool.
@@ -54,7 +52,6 @@ var Connection = /** @class */ (function () {
         this.namingStrategy = options.namingStrategy || new DefaultNamingStrategy();
         this.queryResultCache = options.cache ? new QueryResultCacheFactory(this).create() : undefined;
         this.relationLoader = new RelationLoader(this);
-        this.relationIdLoader = new RelationIdLoader(this);
         this.isConnected = false;
     }
     Object.defineProperty(Connection.prototype, "mongoManager", {
@@ -69,10 +66,10 @@ var Connection = /** @class */ (function () {
          */
         get: function () {
             if (!(this.manager instanceof MongoEntityManager))
-                throw new Error("MongoEntityManager is only available for MongoDB databases.");
+                throw new TypeORMError("MongoEntityManager is only available for MongoDB databases.");
             return this.manager;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Object.defineProperty(Connection.prototype, "sqljsManager", {
@@ -83,10 +80,10 @@ var Connection = /** @class */ (function () {
          */
         get: function () {
             if (!(this.manager instanceof SqljsEntityManager))
-                throw new Error("SqljsEntityManager is only available for Sqljs databases.");
+                throw new TypeORMError("SqljsEntityManager is only available for Sqljs databases.");
             return this.manager;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     // -------------------------------------------------------------------------
@@ -99,9 +96,9 @@ var Connection = /** @class */ (function () {
      * but it also can setup a connection pool with database to use.
      */
     Connection.prototype.connect = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var error_1;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.isConnected)
@@ -165,8 +162,8 @@ var Connection = /** @class */ (function () {
      * Once connection is closed, you cannot use repositories or perform any operations except opening connection again.
      */
     Connection.prototype.close = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            return tslib_1.__generator(this, function (_a) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isConnected)
@@ -194,9 +191,9 @@ var Connection = /** @class */ (function () {
      */
     Connection.prototype.synchronize = function (dropBeforeSync) {
         if (dropBeforeSync === void 0) { dropBeforeSync = false; }
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var schemaBuilder;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isConnected)
@@ -223,35 +220,59 @@ var Connection = /** @class */ (function () {
      */
     // TODO rename
     Connection.prototype.dropDatabase = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var queryRunner, databases_1;
-            return tslib_1.__generator(this, function (_a) {
-                switch (_a.label) {
+        return __awaiter(this, void 0, void 0, function () {
+            var queryRunner, databases_2, databases_1, databases_1_1, database, e_1_1;
+            var e_1, _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
-                        queryRunner = this.createQueryRunner("master");
-                        _a.label = 1;
+                        queryRunner = this.createQueryRunner();
+                        _b.label = 1;
                     case 1:
-                        _a.trys.push([1, , 6, 8]);
-                        if (!(this.driver instanceof SqlServerDriver || this.driver instanceof MysqlDriver || this.driver instanceof AuroraDataApiDriver)) return [3 /*break*/, 3];
-                        databases_1 = this.driver.database ? [this.driver.database] : [];
+                        _b.trys.push([1, , 13, 15]);
+                        if (!(this.driver instanceof SqlServerDriver || this.driver instanceof MysqlDriver || this.driver instanceof AuroraDataApiDriver)) return [3 /*break*/, 10];
+                        databases_2 = this.driver.database ? [this.driver.database] : [];
                         this.entityMetadatas.forEach(function (metadata) {
-                            if (metadata.database && databases_1.indexOf(metadata.database) === -1)
-                                databases_1.push(metadata.database);
+                            if (metadata.database && databases_2.indexOf(metadata.database) === -1)
+                                databases_2.push(metadata.database);
                         });
-                        return [4 /*yield*/, PromiseUtils.runInSequence(databases_1, function (database) { return queryRunner.clearDatabase(database); })];
+                        _b.label = 2;
                     case 2:
-                        _a.sent();
-                        return [3 /*break*/, 5];
-                    case 3: return [4 /*yield*/, queryRunner.clearDatabase()];
+                        _b.trys.push([2, 7, 8, 9]);
+                        databases_1 = __values(databases_2), databases_1_1 = databases_1.next();
+                        _b.label = 3;
+                    case 3:
+                        if (!!databases_1_1.done) return [3 /*break*/, 6];
+                        database = databases_1_1.value;
+                        return [4 /*yield*/, queryRunner.clearDatabase(database)];
                     case 4:
-                        _a.sent();
-                        _a.label = 5;
-                    case 5: return [3 /*break*/, 8];
-                    case 6: return [4 /*yield*/, queryRunner.release()];
+                        _b.sent();
+                        _b.label = 5;
+                    case 5:
+                        databases_1_1 = databases_1.next();
+                        return [3 /*break*/, 3];
+                    case 6: return [3 /*break*/, 9];
                     case 7:
-                        _a.sent();
+                        e_1_1 = _b.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 9];
+                    case 8:
+                        try {
+                            if (databases_1_1 && !databases_1_1.done && (_a = databases_1.return)) _a.call(databases_1);
+                        }
+                        finally { if (e_1) throw e_1.error; }
                         return [7 /*endfinally*/];
-                    case 8: return [2 /*return*/];
+                    case 9: return [3 /*break*/, 12];
+                    case 10: return [4 /*yield*/, queryRunner.clearDatabase()];
+                    case 11:
+                        _b.sent();
+                        _b.label = 12;
+                    case 12: return [3 /*break*/, 15];
+                    case 13: return [4 /*yield*/, queryRunner.release()];
+                    case 14:
+                        _b.sent();
+                        return [7 /*endfinally*/];
+                    case 15: return [2 /*return*/];
                 }
             });
         });
@@ -261,9 +282,9 @@ var Connection = /** @class */ (function () {
      * Can be used only after connection to the database is established.
      */
     Connection.prototype.runMigrations = function (options) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var migrationExecutor, successMigrations;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isConnected)
@@ -283,9 +304,9 @@ var Connection = /** @class */ (function () {
      * Can be used only after connection to the database is established.
      */
     Connection.prototype.undoLastMigration = function (options) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var migrationExecutor;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isConnected)
@@ -305,9 +326,9 @@ var Connection = /** @class */ (function () {
      * Returns true if there are pending migrations
      */
     Connection.prototype.showMigrations = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var migrationExecutor;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isConnected) {
@@ -354,7 +375,7 @@ var Connection = /** @class */ (function () {
      */
     Connection.prototype.getMongoRepository = function (target) {
         if (!(this.driver instanceof MongoDriver))
-            throw new Error("You can use getMongoRepository only for MongoDB connections.");
+            throw new TypeORMError("You can use getMongoRepository only for MongoDB connections.");
         return this.manager.getRepository(target);
     };
     /**
@@ -364,8 +385,8 @@ var Connection = /** @class */ (function () {
         return this.manager.getCustomRepository(customRepository);
     };
     Connection.prototype.transaction = function (isolationOrRunInTransaction, runInTransactionParam) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            return tslib_1.__generator(this, function (_a) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
                 return [2 /*return*/, this.manager.transaction(isolationOrRunInTransaction, runInTransactionParam)];
             });
         });
@@ -374,16 +395,16 @@ var Connection = /** @class */ (function () {
      * Executes raw SQL query and returns raw database results.
      */
     Connection.prototype.query = function (query, parameters, queryRunner) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var usedQueryRunner;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this instanceof MongoEntityManager)
-                            throw new Error("Queries aren't supported by MongoDB.");
+                            throw new TypeORMError("Queries aren't supported by MongoDB.");
                         if (queryRunner && queryRunner.isReleased)
                             throw new QueryRunnerProviderAlreadyReleasedError();
-                        usedQueryRunner = queryRunner || this.createQueryRunner("master");
+                        usedQueryRunner = queryRunner || this.createQueryRunner();
                         _a.label = 1;
                     case 1:
                         _a.trys.push([1, , 3, 6]);
@@ -406,7 +427,7 @@ var Connection = /** @class */ (function () {
      */
     Connection.prototype.createQueryBuilder = function (entityOrRunner, alias, queryRunner) {
         if (this instanceof MongoEntityManager)
-            throw new Error("Query Builder is not supported by MongoDB.");
+            throw new TypeORMError("Query Builder is not supported by MongoDB.");
         if (alias) {
             var metadata = this.getMetadata(entityOrRunner);
             return new SelectQueryBuilder(this, queryRunner)
@@ -440,9 +461,9 @@ var Connection = /** @class */ (function () {
     Connection.prototype.getManyToManyMetadata = function (entityTarget, relationPropertyPath) {
         var relationMetadata = this.getMetadata(entityTarget).findRelationWithPropertyPath(relationPropertyPath);
         if (!relationMetadata)
-            throw new Error("Relation \"" + relationPropertyPath + "\" was not found in " + entityTarget + " entity.");
+            throw new TypeORMError("Relation \"" + relationPropertyPath + "\" was not found in " + entityTarget + " entity.");
         if (!relationMetadata.isManyToMany)
-            throw new Error("Relation \"" + entityTarget + "#" + relationPropertyPath + "\" does not have a many-to-many relationship." +
+            throw new TypeORMError("Relation \"" + entityTarget + "#" + relationPropertyPath + "\" does not have a many-to-many relationship." +
                 "You can use this method only on many-to-many relations.");
         return relationMetadata.junctionEntityMetadata;
     };
@@ -491,24 +512,8 @@ var Connection = /** @class */ (function () {
         // create migration instances
         var migrations = connectionMetadataBuilder.buildMigrations(this.options.migrations || []);
         ObjectUtils.assign(this, { migrations: migrations });
-        this.driver.database = this.getDatabaseName();
         // validate all created entity metadatas to make sure user created entities are valid and correct
         entityMetadataValidator.validateMany(this.entityMetadatas.filter(function (metadata) { return metadata.tableType !== "view"; }), this.driver);
-    };
-    // This database name property is nested for replication configs.
-    Connection.prototype.getDatabaseName = function () {
-        var options = this.options;
-        switch (options.type) {
-            case "mysql":
-            case "mariadb":
-            case "postgres":
-            case "cockroachdb":
-            case "mssql":
-            case "oracle":
-                return DriverUtils.buildDriverOptions(options.replication ? options.replication.master : options).database;
-            default:
-                return DriverUtils.buildDriverOptions(options).database;
-        }
     };
     return Connection;
 }());

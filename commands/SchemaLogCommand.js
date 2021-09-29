@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.SchemaLogCommand = void 0;
 var tslib_1 = require("tslib");
-var index_1 = require("../index");
+var globals_1 = require("../globals");
 var ConnectionOptionsReader_1 = require("../connection/ConnectionOptionsReader");
 var cli_highlight_1 = require("cli-highlight");
-var chalk = require("chalk");
+var chalk_1 = tslib_1.__importDefault(require("chalk"));
 /**
  * Shows sql to be executed by schema:sync command.
  */
@@ -50,20 +51,20 @@ var SchemaLogCommand = /** @class */ (function () {
                             dropSchema: false,
                             logging: false
                         });
-                        return [4 /*yield*/, index_1.createConnection(connectionOptions)];
+                        return [4 /*yield*/, globals_1.createConnection(connectionOptions)];
                     case 3:
                         connection = _a.sent();
                         return [4 /*yield*/, connection.driver.createSchemaBuilder().log()];
                     case 4:
                         sqlInMemory = _a.sent();
                         if (sqlInMemory.upQueries.length === 0) {
-                            console.log(chalk.yellow("Your schema is up to date - there are no queries to be executed by schema syncronization."));
+                            console.log(chalk_1.default.yellow("Your schema is up to date - there are no queries to be executed by schema syncronization."));
                         }
                         else {
                             lengthSeparators = String(sqlInMemory.upQueries.length).split("").map(function (char) { return "-"; }).join("");
-                            console.log(chalk.yellow("---------------------------------------------------------------" + lengthSeparators));
-                            console.log(chalk.yellow.bold("-- Schema syncronization will execute following sql queries (" + chalk.white(sqlInMemory.upQueries.length) + "):"));
-                            console.log(chalk.yellow("---------------------------------------------------------------" + lengthSeparators));
+                            console.log(chalk_1.default.yellow("---------------------------------------------------------------" + lengthSeparators));
+                            console.log(chalk_1.default.yellow.bold("-- Schema syncronization will execute following sql queries (" + chalk_1.default.white(sqlInMemory.upQueries.length.toString()) + "):"));
+                            console.log(chalk_1.default.yellow("---------------------------------------------------------------" + lengthSeparators));
                             sqlInMemory.upQueries.forEach(function (upQuery) {
                                 var sqlString = upQuery.query;
                                 sqlString = sqlString.trim();
@@ -78,7 +79,7 @@ var SchemaLogCommand = /** @class */ (function () {
                     case 6:
                         err_1 = _a.sent();
                         if (connection)
-                            console.log(chalk.black.bgRed("Error during schema synchronization:"));
+                            console.log(chalk_1.default.black.bgRed("Error during schema synchronization:"));
                         console.error(err_1);
                         process.exit(1);
                         return [3 /*break*/, 7];

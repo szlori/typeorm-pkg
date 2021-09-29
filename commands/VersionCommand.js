@@ -1,7 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.VersionCommand = void 0;
 var tslib_1 = require("tslib");
-var exec = require("child_process").exec;
+var child_process_1 = require("child_process");
 /**
  * Shows typeorm version.
  */
@@ -48,7 +49,7 @@ var VersionCommand = /** @class */ (function () {
     };
     VersionCommand.executeCommand = function (command) {
         return new Promise(function (ok, fail) {
-            exec(command, function (error, stdout, stderr) {
+            child_process_1.exec(command, function (error, stdout, stderr) {
                 if (stdout)
                     return ok(stdout);
                 if (stderr)

@@ -1,10 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.AbstractSqliteDriver = void 0;
 var tslib_1 = require("tslib");
 var DateUtils_1 = require("../../util/DateUtils");
 var RdbmsSchemaBuilder_1 = require("../../schema-builder/RdbmsSchemaBuilder");
+var EntityMetadata_1 = require("../../metadata/EntityMetadata");
 var OrmUtils_1 = require("../../util/OrmUtils");
 var ApplyValueTransformers_1 = require("../../util/ApplyValueTransformers");
+var DriverUtils_1 = require("../DriverUtils");
+var error_1 = require("../../error");
+var Table_1 = require("../../schema-builder/table/Table");
+var View_1 = require("../../schema-builder/view/View");
+var TableForeignKey_1 = require("../../schema-builder/table/TableForeignKey");
 /**
  * Organizes communication with sqlite DBMS.
  */
@@ -81,11 +88,30 @@ var AbstractSqliteDriver = /** @class */ (function () {
         /**
          * Gets list of column data types that support precision by a driver.
          */
-        this.withPrecisionColumnTypes = [];
+        this.withPrecisionColumnTypes = [
+            "real",
+            "double",
+            "double precision",
+            "float",
+            "real",
+            "numeric",
+            "decimal",
+            "date",
+            "time",
+            "datetime"
+        ];
         /**
          * Gets list of column data types that support scale by a driver.
          */
-        this.withScaleColumnTypes = [];
+        this.withScaleColumnTypes = [
+            "real",
+            "double",
+            "double precision",
+            "float",
+            "real",
+            "numeric",
+            "decimal",
+        ];
         /**
          * Orm has special columns and we need to know what database column types should be for those types.
          * Column types are driver dependant.
@@ -117,6 +143,7 @@ var AbstractSqliteDriver = /** @class */ (function () {
         };
         this.connection = connection;
         this.options = connection.options;
+        this.database = DriverUtils_1.DriverUtils.buildDriverOptions(this.options).database;
     }
     // -------------------------------------------------------------------------
     // Public Methods
@@ -256,7 +283,8 @@ var AbstractSqliteDriver = /** @class */ (function () {
      * and an array of parameter names to be passed to a query.
      */
     AbstractSqliteDriver.prototype.escapeQueryWithParameters = function (sql, parameters, nativeParameters) {
-        var builtParameters = Object.keys(nativeParameters).map(function (key) {
+        var _this = this;
+        var escapedParameters = Object.keys(nativeParameters).map(function (key) {
             // Mapping boolean values to their numeric representation
             if (typeof nativeParameters[key] === "boolean") {
                 return nativeParameters[key] === true ? 1 : 0;
@@ -264,35 +292,25 @@ var AbstractSqliteDriver = /** @class */ (function () {
             return nativeParameters[key];
         });
         if (!parameters || !Object.keys(parameters).length)
-            return [sql, builtParameters];
-        var keys = Object.keys(parameters).map(function (parameter) { return "(:(\\.\\.\\.)?" + parameter + "\\b)"; }).join("|");
-        sql = sql.replace(new RegExp(keys, "g"), function (key) {
-            var value;
-            var isArray = false;
-            if (key.substr(0, 4) === ":...") {
-                isArray = true;
-                value = parameters[key.substr(4)];
+            return [sql, escapedParameters];
+        sql = sql.replace(/:(\.\.\.)?([A-Za-z0-9_.]+)/g, function (full, isArray, key) {
+            if (!parameters.hasOwnProperty(key)) {
+                return full;
             }
-            else {
-                value = parameters[key.substr(1)];
-            }
+            var value = parameters[key];
             if (isArray) {
                 return value.map(function (v) {
-                    builtParameters.push(v);
-                    return "?";
-                    // return "$" + builtParameters.length;
+                    escapedParameters.push(v);
+                    return _this.createParameter(key, escapedParameters.length - 1);
                 }).join(", ");
             }
-            else if (value instanceof Function) {
+            if (value instanceof Function) {
                 return value();
             }
-            else {
-                builtParameters.push(value);
-                return "?";
-                // return "$" + builtParameters.length;
-            }
+            escapedParameters.push(value);
+            return _this.createParameter(key, escapedParameters.length - 1);
         }); // todo: make replace only in value statements, otherwise problems
-        return [sql, builtParameters];
+        return [sql, escapedParameters];
     };
     /**
      * Escapes a column name.
@@ -302,12 +320,65 @@ var AbstractSqliteDriver = /** @class */ (function () {
     };
     /**
      * Build full table name with database name, schema name and table name.
-     * E.g. "myDB"."mySchema"."myTable"
+     * E.g. myDB.mySchema.myTable
      *
      * Returns only simple table name because all inherited drivers does not supports schema and database.
      */
     AbstractSqliteDriver.prototype.buildTableName = function (tableName, schema, database) {
         return tableName;
+    };
+    /**
+     * Parse a target table name or other types and return a normalized table definition.
+     */
+    AbstractSqliteDriver.prototype.parseTableName = function (target) {
+        var driverDatabase = this.database;
+        var driverSchema = undefined;
+        if (target instanceof Table_1.Table || target instanceof View_1.View) {
+            var parsed = this.parseTableName(target.name);
+            return {
+                database: target.database || parsed.database || driverDatabase,
+                schema: target.schema || parsed.schema || driverSchema,
+                tableName: parsed.tableName,
+            };
+        }
+        if (target instanceof TableForeignKey_1.TableForeignKey) {
+            var parsed = this.parseTableName(target.referencedTableName);
+            return {
+                database: target.referencedDatabase || parsed.database || driverDatabase,
+                schema: target.referencedSchema || parsed.schema || driverSchema,
+                tableName: parsed.tableName
+            };
+        }
+        if (target instanceof EntityMetadata_1.EntityMetadata) {
+            // EntityMetadata tableName is never a path
+            return {
+                database: target.database || driverDatabase,
+                schema: target.schema || driverSchema,
+                tableName: target.tableName
+            };
+        }
+        var parts = target.split(".");
+        if (parts.length === 3) {
+            return {
+                database: parts[0] || driverDatabase,
+                schema: parts[1] || driverSchema,
+                tableName: parts[2]
+            };
+        }
+        else if (parts.length === 2) {
+            return {
+                database: driverDatabase,
+                schema: parts[0],
+                tableName: parts[1]
+            };
+        }
+        else {
+            return {
+                database: driverDatabase,
+                schema: driverSchema,
+                tableName: target
+            };
+        }
     };
     /**
      * Creates a database type from a given column metadata.
@@ -349,18 +420,19 @@ var AbstractSqliteDriver = /** @class */ (function () {
         if (typeof defaultValue === "number") {
             return "" + defaultValue;
         }
-        else if (typeof defaultValue === "boolean") {
-            return defaultValue === true ? "1" : "0";
+        if (typeof defaultValue === "boolean") {
+            return defaultValue ? "1" : "0";
         }
-        else if (typeof defaultValue === "function") {
+        if (typeof defaultValue === "function") {
             return defaultValue();
         }
-        else if (typeof defaultValue === "string") {
+        if (typeof defaultValue === "string") {
             return "'" + defaultValue + "'";
         }
-        else {
-            return defaultValue;
+        if (defaultValue === null || defaultValue === undefined) {
+            return undefined;
         }
+        return "" + defaultValue;
     };
     /**
      * Normalizes "isUnique" value of the column.
@@ -414,11 +486,13 @@ var AbstractSqliteDriver = /** @class */ (function () {
     /**
      * Creates generated map of values generated or returned by database after INSERT query.
      */
-    AbstractSqliteDriver.prototype.createGeneratedMap = function (metadata, insertResult) {
+    AbstractSqliteDriver.prototype.createGeneratedMap = function (metadata, insertResult, entityIndex, entityNum) {
         var generatedMap = metadata.generatedColumns.reduce(function (map, generatedColumn) {
             var value;
             if (generatedColumn.generationStrategy === "increment" && insertResult) {
-                value = insertResult;
+                // NOTE: When INSERT statement is successfully completed, the last inserted row ID is returned.
+                // see also: SqliteQueryRunner.query()
+                value = insertResult - entityNum + entityIndex + 1;
                 // } else if (generatedColumn.generationStrategy === "uuid") {
                 //     value = insertValue[generatedColumn.databaseName];
             }
@@ -445,7 +519,7 @@ var AbstractSqliteDriver = /** @class */ (function () {
             // console.log("precision:", tableColumn.precision, columnMetadata.precision);
             // console.log("scale:", tableColumn.scale, columnMetadata.scale);
             // console.log("comment:", tableColumn.comment, columnMetadata.comment);
-            // console.log("default:", tableColumn.default, columnMetadata.default);
+            // console.log("default:", this.normalizeDefault(columnMetadata), columnMetadata.default);
             // console.log("isPrimary:", tableColumn.isPrimary, columnMetadata.isPrimary);
             // console.log("isNullable:", tableColumn.isNullable, columnMetadata.isNullable);
             // console.log("isUnique:", tableColumn.isUnique, this.normalizeIsUnique(columnMetadata));
@@ -477,6 +551,12 @@ var AbstractSqliteDriver = /** @class */ (function () {
         return false;
     };
     /**
+     * Returns true if driver supports fulltext indices.
+     */
+    AbstractSqliteDriver.prototype.isFullTextColumnTypeSupported = function () {
+        return false;
+    };
+    /**
      * Creates an escaped parameter.
      */
     AbstractSqliteDriver.prototype.createParameter = function (parameterName, index) {
@@ -491,7 +571,7 @@ var AbstractSqliteDriver = /** @class */ (function () {
      * Creates connection with the database.
      */
     AbstractSqliteDriver.prototype.createDatabaseConnection = function () {
-        throw new Error("Do not use AbstractSqlite directly, it has to be used with one of the sqlite drivers");
+        throw new error_1.TypeORMError("Do not use AbstractSqlite directly, it has to be used with one of the sqlite drivers");
     };
     /**
      * If driver dependency is not given explicitly, then try to load it via "require".

@@ -14,6 +14,7 @@ import { Broadcaster } from "../subscriber/Broadcaster";
 import { TableCheck } from "../schema-builder/table/TableCheck";
 import { IsolationLevel } from "../driver/types/IsolationLevel";
 import { TableExclusion } from "../schema-builder/table/TableExclusion";
+import { QueryResult } from "./QueryResult";
 /**
  * Runs queries on a single database connection.
  */
@@ -46,10 +47,14 @@ export interface QueryRunner {
     data: ObjectLiteral;
     /**
      * All synchronized tables in the database.
+     *
+     * @deprecated Call `getTables()`
      */
     loadedTables: Table[];
     /**
      * All synchronized views in the database.
+     *
+     * @deprecated Call `getViews()`
      */
     loadedViews: View[];
     /**
@@ -78,10 +83,14 @@ export interface QueryRunner {
      */
     commitTransaction(): Promise<void>;
     /**
-     * Ends transaction.
+     * Rollbacks transaction.
      * Error will be thrown if transaction was not started.
      */
     rollbackTransaction(): Promise<void>;
+    /**
+     * Executes a given SQL query and returns raw database results.
+     */
+    query(query: string, parameters: any[] | undefined, useStructuredResult: true): Promise<QueryResult>;
     /**
      * Executes a given SQL query and returns raw database results.
      */
@@ -106,10 +115,8 @@ export interface QueryRunner {
     getTable(tablePath: string): Promise<Table | undefined>;
     /**
      * Loads all tables from the database and returns them.
-     *
-     * todo: make tablePaths optional
      */
-    getTables(tablePaths: string[]): Promise<Table[]>;
+    getTables(tablePaths?: string[]): Promise<Table[]>;
     /**
      * Loads a view by a given name from the database.
      */
@@ -117,15 +124,23 @@ export interface QueryRunner {
     /**
      * Loads all views from the database and returns them.
      */
-    getViews(viewPaths: string[]): Promise<View[]>;
+    getViews(viewPaths?: string[]): Promise<View[]>;
     /**
      * Checks if a database with the given name exist.
      */
     hasDatabase(database: string): Promise<boolean>;
     /**
+     * Loads currently using database
+     */
+    getCurrentDatabase(): Promise<string | undefined>;
+    /**
      * Checks if a schema with the given name exist.
      */
     hasSchema(schema: string): Promise<boolean>;
+    /**
+     * Loads currently using database schema
+     */
+    getCurrentSchema(): Promise<string | undefined>;
     /**
      * Checks if a table with the given name exist.
      */
@@ -202,7 +217,7 @@ export interface QueryRunner {
     /**
      * Drops columns in the table.
      */
-    dropColumns(table: Table | string, columns: TableColumn[]): Promise<void>;
+    dropColumns(table: Table | string, columns: TableColumn[] | string[]): Promise<void>;
     /**
      * Creates a new primary key.
      */

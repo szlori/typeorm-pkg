@@ -1,8 +1,10 @@
-import * as tslib_1 from "tslib";
+import { __awaiter, __generator } from "tslib";
+import appRootPath from "app-root-path";
 import { PlatformTools } from "../platform/PlatformTools";
 import { ConnectionOptionsEnvReader } from "./options-reader/ConnectionOptionsEnvReader";
 import { ConnectionOptionsYmlReader } from "./options-reader/ConnectionOptionsYmlReader";
 import { ConnectionOptionsXmlReader } from "./options-reader/ConnectionOptionsXmlReader";
+import { TypeORMError } from "../error";
 /**
  * Reads connection options from the ormconfig.
  * Can read from multiple file extensions including env, json, js, xml and yml.
@@ -21,15 +23,15 @@ var ConnectionOptionsReader = /** @class */ (function () {
      * Returns all connection options read from the ormconfig.
      */
     ConnectionOptionsReader.prototype.all = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var options;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.load()];
                     case 1:
                         options = _a.sent();
                         if (!options)
-                            throw new Error("No connection options were found in any orm configuration files.");
+                            throw new TypeORMError("No connection options were found in any orm configuration files.");
                         return [2 /*return*/, options];
                 }
             });
@@ -40,16 +42,16 @@ var ConnectionOptionsReader = /** @class */ (function () {
      * If connection with such name would not be found then it throw error.
      */
     ConnectionOptionsReader.prototype.get = function (name) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var allOptions, targetOptions;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.all()];
                     case 1:
                         allOptions = _a.sent();
                         targetOptions = allOptions.find(function (options) { return options.name === name || (name === "default" && !options.name); });
                         if (!targetOptions)
-                            throw new Error("Cannot find connection " + name + " because its not defined in any orm configuration files.");
+                            throw new TypeORMError("Cannot find connection " + name + " because its not defined in any orm configuration files.");
                         return [2 /*return*/, targetOptions];
                 }
             });
@@ -59,9 +61,9 @@ var ConnectionOptionsReader = /** @class */ (function () {
      * Checks if there is a TypeORM configuration file.
      */
     ConnectionOptionsReader.prototype.has = function (name) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var allOptions, targetOptions;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.load()];
                     case 1:
@@ -83,10 +85,10 @@ var ConnectionOptionsReader = /** @class */ (function () {
      * todo: get in count NODE_ENV somehow
      */
     ConnectionOptionsReader.prototype.load = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var connectionOptions, fileFormats, possibleExtension, fileExtension, foundFileFormat, dotenv, dotenv, configFile;
+        return __awaiter(this, void 0, void 0, function () {
+            var connectionOptions, fileFormats, possibleExtension, fileExtension, foundFileFormat, configFile, configModule;
             var _this = this;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         connectionOptions = undefined;
@@ -96,50 +98,54 @@ var ConnectionOptionsReader = /** @class */ (function () {
                         foundFileFormat = fileExtension || fileFormats.find(function (format) {
                             return PlatformTools.fileExist(_this.baseFilePath + "." + format);
                         });
+                        configFile = fileExtension ? this.baseFilePath : this.baseFilePath + "." + foundFileFormat;
                         // if .env file found then load all its variables into process.env using dotenv package
                         if (foundFileFormat === "env") {
-                            dotenv = PlatformTools.load("dotenv");
-                            dotenv.config({ path: this.baseFilePath });
+                            PlatformTools.dotenv(configFile);
                         }
-                        else if (PlatformTools.fileExist(".env")) {
-                            dotenv = PlatformTools.load("dotenv");
-                            dotenv.config({ path: ".env" });
+                        else if (PlatformTools.fileExist(this.baseDirectory + "/.env")) {
+                            PlatformTools.dotenv(this.baseDirectory + "/.env");
                         }
-                        configFile = fileExtension ? this.baseFilePath : this.baseFilePath + "." + foundFileFormat;
-                        if (!(PlatformTools.getEnvVariable("TYPEORM_CONNECTION") || PlatformTools.getEnvVariable("TYPEORM_URL"))) return [3 /*break*/, 1];
-                        connectionOptions = new ConnectionOptionsEnvReader().read();
-                        return [3 /*break*/, 10];
+                        if (!(PlatformTools.getEnvVariable("TYPEORM_CONNECTION") || PlatformTools.getEnvVariable("TYPEORM_URL"))) return [3 /*break*/, 2];
+                        return [4 /*yield*/, new ConnectionOptionsEnvReader().read()];
                     case 1:
-                        if (!(foundFileFormat === "js" || foundFileFormat === "cjs")) return [3 /*break*/, 3];
-                        return [4 /*yield*/, PlatformTools.load(configFile)];
+                        connectionOptions = _a.sent();
+                        return [3 /*break*/, 11];
                     case 2:
-                        connectionOptions = _a.sent();
-                        return [3 /*break*/, 10];
+                        if (!(foundFileFormat === "js" || foundFileFormat === "cjs" || foundFileFormat === "ts")) return [3 /*break*/, 4];
+                        return [4 /*yield*/, require(configFile)];
                     case 3:
-                        if (!(foundFileFormat === "ts")) return [3 /*break*/, 5];
-                        return [4 /*yield*/, PlatformTools.load(configFile)];
+                        configModule = _a.sent();
+                        if (configModule && "__esModule" in configModule && "default" in configModule) {
+                            connectionOptions = configModule.default;
+                        }
+                        else {
+                            connectionOptions = configModule;
+                        }
+                        return [3 /*break*/, 11];
                     case 4:
-                        connectionOptions = _a.sent();
-                        return [3 /*break*/, 10];
+                        if (!(foundFileFormat === "json")) return [3 /*break*/, 5];
+                        connectionOptions = require(configFile);
+                        return [3 /*break*/, 11];
                     case 5:
-                        if (!(foundFileFormat === "json")) return [3 /*break*/, 6];
-                        connectionOptions = PlatformTools.load(configFile);
-                        return [3 /*break*/, 10];
-                    case 6:
                         if (!(foundFileFormat === "yml")) return [3 /*break*/, 7];
-                        connectionOptions = new ConnectionOptionsYmlReader().read(configFile);
-                        return [3 /*break*/, 10];
-                    case 7:
-                        if (!(foundFileFormat === "yaml")) return [3 /*break*/, 8];
-                        connectionOptions = new ConnectionOptionsYmlReader().read(configFile);
-                        return [3 /*break*/, 10];
-                    case 8:
-                        if (!(foundFileFormat === "xml")) return [3 /*break*/, 10];
-                        return [4 /*yield*/, new ConnectionOptionsXmlReader().read(configFile)];
-                    case 9:
+                        return [4 /*yield*/, new ConnectionOptionsYmlReader().read(configFile)];
+                    case 6:
                         connectionOptions = _a.sent();
-                        _a.label = 10;
+                        return [3 /*break*/, 11];
+                    case 7:
+                        if (!(foundFileFormat === "yaml")) return [3 /*break*/, 9];
+                        return [4 /*yield*/, new ConnectionOptionsYmlReader().read(configFile)];
+                    case 8:
+                        connectionOptions = _a.sent();
+                        return [3 /*break*/, 11];
+                    case 9:
+                        if (!(foundFileFormat === "xml")) return [3 /*break*/, 11];
+                        return [4 /*yield*/, new ConnectionOptionsXmlReader().read(configFile)];
                     case 10:
+                        connectionOptions = _a.sent();
+                        _a.label = 11;
+                    case 11:
                         // normalize and return connection options
                         if (connectionOptions) {
                             return [2 /*return*/, this.normalizeConnectionOptions(connectionOptions)];
@@ -202,7 +208,7 @@ var ConnectionOptionsReader = /** @class */ (function () {
         get: function () {
             return this.baseDirectory + "/" + this.baseConfigName;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Object.defineProperty(ConnectionOptionsReader.prototype, "baseDirectory", {
@@ -212,9 +218,9 @@ var ConnectionOptionsReader = /** @class */ (function () {
         get: function () {
             if (this.options && this.options.root)
                 return this.options.root;
-            return PlatformTools.load("app-root-path").path;
+            return appRootPath.path;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Object.defineProperty(ConnectionOptionsReader.prototype, "baseConfigName", {
@@ -226,7 +232,7 @@ var ConnectionOptionsReader = /** @class */ (function () {
                 return this.options.configName;
             return "ormconfig";
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     return ConnectionOptionsReader;

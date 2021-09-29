@@ -1,6 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.BetterSqlite3Driver = void 0;
 var tslib_1 = require("tslib");
+var mkdirp_1 = tslib_1.__importDefault(require("mkdirp"));
+var path_1 = tslib_1.__importDefault(require("path"));
 var DriverPackageNotInstalledError_1 = require("../../error/DriverPackageNotInstalledError");
 var DriverOptionNotSetError_1 = require("../../error/DriverOptionNotSetError");
 var PlatformTools_1 = require("../../platform/PlatformTools");
@@ -45,7 +48,6 @@ var BetterSqlite3Driver = /** @class */ (function (_super) {
      * Creates a query runner used to execute database queries.
      */
     BetterSqlite3Driver.prototype.createQueryRunner = function (mode) {
-        if (mode === void 0) { mode = "master"; }
         if (!this.queryRunner)
             this.queryRunner = new BetterSqlite3QueryRunner_1.BetterSqlite3QueryRunner(this);
         return this.queryRunner;
@@ -108,9 +110,16 @@ var BetterSqlite3Driver = /** @class */ (function (_super) {
      * Auto creates database directory if it does not exist.
      */
     BetterSqlite3Driver.prototype.createDatabaseDirectory = function (fullPath) {
-        var mkdirp = PlatformTools_1.PlatformTools.load("mkdirp");
-        var path = PlatformTools_1.PlatformTools.load("path");
-        return mkdirp(path.dirname(fullPath));
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            return tslib_1.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, mkdirp_1.default(path_1.default.dirname(fullPath))];
+                    case 1:
+                        _a.sent();
+                        return [2 /*return*/];
+                }
+            });
+        });
     };
     return BetterSqlite3Driver;
 }(AbstractSqliteDriver_1.AbstractSqliteDriver));

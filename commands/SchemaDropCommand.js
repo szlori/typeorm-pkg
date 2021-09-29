@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.SchemaDropCommand = void 0;
 var tslib_1 = require("tslib");
-var index_1 = require("../index");
+var globals_1 = require("../globals");
 var ConnectionOptionsReader_1 = require("../connection/ConnectionOptionsReader");
-var chalk = require("chalk");
+var chalk_1 = tslib_1.__importDefault(require("chalk"));
 /**
  * Drops all tables of the database from the given connection.
  */
@@ -49,7 +50,7 @@ var SchemaDropCommand = /** @class */ (function () {
                             dropSchema: false,
                             logging: ["query", "schema"]
                         });
-                        return [4 /*yield*/, index_1.createConnection(connectionOptions)];
+                        return [4 /*yield*/, globals_1.createConnection(connectionOptions)];
                     case 3:
                         connection = _a.sent();
                         return [4 /*yield*/, connection.dropDatabase()];
@@ -58,7 +59,7 @@ var SchemaDropCommand = /** @class */ (function () {
                         return [4 /*yield*/, connection.close()];
                     case 5:
                         _a.sent();
-                        console.log(chalk.green("Database schema has been successfully dropped."));
+                        console.log(chalk_1.default.green("Database schema has been successfully dropped."));
                         return [3 /*break*/, 9];
                     case 6:
                         err_1 = _a.sent();
@@ -68,7 +69,7 @@ var SchemaDropCommand = /** @class */ (function () {
                         _a.sent();
                         _a.label = 8;
                     case 8:
-                        console.log(chalk.black.bgRed("Error during schema drop:"));
+                        console.log(chalk_1.default.black.bgRed("Error during schema drop:"));
                         console.error(err_1);
                         process.exit(1);
                         return [3 /*break*/, 9];

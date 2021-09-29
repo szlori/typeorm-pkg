@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.EntitySchemaTransformer = void 0;
 var tslib_1 = require("tslib");
 var MetadataArgsStorage_1 = require("../metadata-args/MetadataArgsStorage");
 /**
@@ -118,7 +119,8 @@ var EntitySchemaTransformer = /** @class */ (function () {
                             onUpdate: relationSchema.onUpdate,
                             deferrable: relationSchema.deferrable,
                             primary: relationSchema.primary,
-                            persistence: relationSchema.persistence
+                            persistence: relationSchema.persistence,
+                            orphanedRowAction: relationSchema.orphanedRowAction
                         }
                     };
                     metadataArgsStorage.relations.push(relation);

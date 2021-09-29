@@ -25,6 +25,8 @@ export declare class RdbmsSchemaBuilder implements SchemaBuilder {
      * Used to execute schema creation queries in a single connection.
      */
     protected queryRunner: QueryRunner;
+    private currentDatabase?;
+    private currentSchema?;
     constructor(connection: Connection);
     /**
      * Creates complete schemas for the given entity metadatas.
@@ -37,16 +39,17 @@ export declare class RdbmsSchemaBuilder implements SchemaBuilder {
     /**
      * Returns only entities that should be synced in the database.
      */
-    protected readonly entityToSyncMetadatas: EntityMetadata[];
+    protected get entityToSyncMetadatas(): EntityMetadata[];
     /**
      * Returns only entities that should be synced in the database.
      */
-    protected readonly viewEntityToSyncMetadatas: EntityMetadata[];
+    protected get viewEntityToSyncMetadatas(): EntityMetadata[];
     /**
      * Executes schema sync operations in a proper order.
      * Order of operations matter here.
      */
     protected executeSchemaSyncOperationsInProperOrder(): Promise<void>;
+    private getTablePath;
     /**
      * Drops all (old) foreign keys that exist in the tables, but do not exist in the entity metadata.
      */

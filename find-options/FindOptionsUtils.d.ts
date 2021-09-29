@@ -9,11 +9,11 @@ export declare class FindOptionsUtils {
     /**
      * Checks if given object is really instance of FindOneOptions interface.
      */
-    static isFindOneOptions(obj: any): obj is FindOneOptions<any>;
+    static isFindOneOptions<Entity = any>(obj: any): obj is FindOneOptions<Entity>;
     /**
      * Checks if given object is really instance of FindManyOptions interface.
      */
-    static isFindManyOptions(obj: any): obj is FindManyOptions<any>;
+    static isFindManyOptions<Entity = any>(obj: any): obj is FindManyOptions<Entity>;
     /**
      * Checks if given object is really instance of FindOptions interface.
      */
@@ -29,6 +29,6 @@ export declare class FindOptionsUtils {
     /**
      * Adds joins for all relations and sub-relations of the given relations provided in the find options.
      */
-    protected static applyRelationsRecursively(qb: SelectQueryBuilder<any>, allRelations: string[], alias: string, metadata: EntityMetadata, prefix: string): void;
+    static applyRelationsRecursively(qb: SelectQueryBuilder<any>, allRelations: string[], alias: string, metadata: EntityMetadata, prefix: string): void;
     static joinEagerRelations(qb: SelectQueryBuilder<any>, alias: string, metadata: EntityMetadata): void;
 }

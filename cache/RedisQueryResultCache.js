@@ -1,7 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.RedisQueryResultCache = void 0;
 var tslib_1 = require("tslib");
 var PlatformTools_1 = require("../platform/PlatformTools");
+var TypeORMError_1 = require("../error/TypeORMError");
 /**
  * Caches query result into Redis database.
  */
@@ -34,7 +36,15 @@ var RedisQueryResultCache = /** @class */ (function () {
                     }
                 }
                 else if (this.clientType === "ioredis") {
-                    if (cacheOptions && cacheOptions.options) {
+                    if (cacheOptions && cacheOptions.port) {
+                        if (cacheOptions.options) {
+                            this.client = new this.redis(cacheOptions.port, cacheOptions.options);
+                        }
+                        else {
+                            this.client = new this.redis(cacheOptions.port);
+                        }
+                    }
+                    else if (cacheOptions && cacheOptions.options) {
                         this.client = new this.redis(cacheOptions.options);
                     }
                     else {
@@ -49,7 +59,7 @@ var RedisQueryResultCache = /** @class */ (function () {
                         this.client = new this.redis.Cluster(cacheOptions.options.startupNodes, cacheOptions.options.options);
                     }
                     else {
-                        throw new Error("options.startupNodes required for " + this.clientType + ".");
+                        throw new TypeORMError_1.TypeORMError("options.startupNodes required for " + this.clientType + ".");
                     }
                 }
                 return [2 /*return*/];
@@ -199,10 +209,15 @@ var RedisQueryResultCache = /** @class */ (function () {
      */
     RedisQueryResultCache.prototype.loadRedis = function () {
         try {
-            return PlatformTools_1.PlatformTools.load(this.clientType);
+            if (this.clientType === "ioredis/cluster") {
+                return PlatformTools_1.PlatformTools.load("ioredis");
+            }
+            else {
+                return PlatformTools_1.PlatformTools.load(this.clientType);
+            }
         }
         catch (e) {
-            throw new Error("Cannot use cache because " + this.clientType + " is not installed. Please run \"npm i " + this.clientType + " --save\".");
+            throw new TypeORMError_1.TypeORMError("Cannot use cache because " + this.clientType + " is not installed. Please run \"npm i " + this.clientType + " --save\".");
         }
     };
     return RedisQueryResultCache;

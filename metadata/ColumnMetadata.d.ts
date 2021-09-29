@@ -87,11 +87,11 @@ export declare class ColumnMetadata {
      * Column comment.
      * This feature is not supported by all databases.
      */
-    comment: string;
+    comment?: string;
     /**
      * Default database value.
      */
-    default?: any;
+    default?: number | boolean | string | null | (number | boolean | string)[] | Record<string, object> | (() => string);
     /**
      * ON UPDATE trigger. Works only for MySQL.
      */

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.AbstractSqliteQueryRunner = void 0;
 var tslib_1 = require("tslib");
 var TransactionAlreadyStartedError_1 = require("../../error/TransactionAlreadyStartedError");
 var TransactionNotStartedError_1 = require("../../error/TransactionNotStartedError");
@@ -9,11 +10,13 @@ var Table_1 = require("../../schema-builder/table/Table");
 var TableIndex_1 = require("../../schema-builder/table/TableIndex");
 var TableForeignKey_1 = require("../../schema-builder/table/TableForeignKey");
 var View_1 = require("../../schema-builder/view/View");
+var BroadcasterResult_1 = require("../../subscriber/BroadcasterResult");
 var Query_1 = require("../Query");
 var TableUnique_1 = require("../../schema-builder/table/TableUnique");
 var BaseQueryRunner_1 = require("../../query-runner/BaseQueryRunner");
 var OrmUtils_1 = require("../../util/OrmUtils");
 var TableCheck_1 = require("../../schema-builder/table/TableCheck");
+var error_1 = require("../../error");
 /**
  * Runs queries on a single sqlite database connection.
  */
@@ -49,15 +52,15 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
      */
     AbstractSqliteQueryRunner.prototype.startTransaction = function (isolationLevel) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var beforeBroadcastResult, afterBroadcastResult;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.isTransactionActive)
                             throw new TransactionAlreadyStartedError_1.TransactionAlreadyStartedError();
-                        this.isTransactionActive = true;
                         if (!isolationLevel) return [3 /*break*/, 4];
                         if (isolationLevel !== "READ UNCOMMITTED" && isolationLevel !== "SERIALIZABLE") {
-                            throw new Error("SQLite only supports SERIALIZABLE and READ UNCOMMITTED isolation");
+                            throw new error_1.TypeORMError("SQLite only supports SERIALIZABLE and READ UNCOMMITTED isolation");
                         }
                         if (!(isolationLevel === "READ UNCOMMITTED")) return [3 /*break*/, 2];
                         return [4 /*yield*/, this.query("PRAGMA read_uncommitted = true")];
@@ -68,10 +71,27 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                     case 3:
                         _a.sent();
                         _a.label = 4;
-                    case 4: return [4 /*yield*/, this.query("BEGIN TRANSACTION")];
+                    case 4:
+                        beforeBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastBeforeTransactionStartEvent(beforeBroadcastResult);
+                        if (!(beforeBroadcastResult.promises.length > 0)) return [3 /*break*/, 6];
+                        return [4 /*yield*/, Promise.all(beforeBroadcastResult.promises)];
                     case 5:
                         _a.sent();
-                        return [2 /*return*/];
+                        _a.label = 6;
+                    case 6:
+                        this.isTransactionActive = true;
+                        return [4 /*yield*/, this.query("BEGIN TRANSACTION")];
+                    case 7:
+                        _a.sent();
+                        afterBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastAfterTransactionStartEvent(afterBroadcastResult);
+                        if (!(afterBroadcastResult.promises.length > 0)) return [3 /*break*/, 9];
+                        return [4 /*yield*/, Promise.all(afterBroadcastResult.promises)];
+                    case 8:
+                        _a.sent();
+                        _a.label = 9;
+                    case 9: return [2 /*return*/];
                 }
             });
         });
@@ -82,16 +102,31 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
      */
     AbstractSqliteQueryRunner.prototype.commitTransaction = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var beforeBroadcastResult, afterBroadcastResult;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isTransactionActive)
                             throw new TransactionNotStartedError_1.TransactionNotStartedError();
-                        return [4 /*yield*/, this.query("COMMIT")];
+                        beforeBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastBeforeTransactionCommitEvent(beforeBroadcastResult);
+                        if (!(beforeBroadcastResult.promises.length > 0)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, Promise.all(beforeBroadcastResult.promises)];
                     case 1:
                         _a.sent();
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, this.query("COMMIT")];
+                    case 3:
+                        _a.sent();
                         this.isTransactionActive = false;
-                        return [2 /*return*/];
+                        afterBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastAfterTransactionCommitEvent(afterBroadcastResult);
+                        if (!(afterBroadcastResult.promises.length > 0)) return [3 /*break*/, 5];
+                        return [4 /*yield*/, Promise.all(afterBroadcastResult.promises)];
+                    case 4:
+                        _a.sent();
+                        _a.label = 5;
+                    case 5: return [2 /*return*/];
                 }
             });
         });
@@ -102,16 +137,31 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
      */
     AbstractSqliteQueryRunner.prototype.rollbackTransaction = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var beforeBroadcastResult, afterBroadcastResult;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isTransactionActive)
                             throw new TransactionNotStartedError_1.TransactionNotStartedError();
-                        return [4 /*yield*/, this.query("ROLLBACK")];
+                        beforeBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastBeforeTransactionRollbackEvent(beforeBroadcastResult);
+                        if (!(beforeBroadcastResult.promises.length > 0)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, Promise.all(beforeBroadcastResult.promises)];
                     case 1:
                         _a.sent();
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, this.query("ROLLBACK")];
+                    case 3:
+                        _a.sent();
                         this.isTransactionActive = false;
-                        return [2 /*return*/];
+                        afterBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastAfterTransactionRollbackEvent(afterBroadcastResult);
+                        if (!(afterBroadcastResult.promises.length > 0)) return [3 /*break*/, 5];
+                        return [4 /*yield*/, Promise.all(afterBroadcastResult.promises)];
+                    case 4:
+                        _a.sent();
+                        _a.label = 5;
+                    case 5: return [2 /*return*/];
                 }
             });
         });
@@ -120,7 +170,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
      * Returns raw data stream.
      */
     AbstractSqliteQueryRunner.prototype.stream = function (query, parameters, onEnd, onError) {
-        throw new Error("Stream is not supported by sqlite driver.");
+        throw new error_1.TypeORMError("Stream is not supported by sqlite driver.");
     };
     /**
      * Returns all available database names including system databases.
@@ -154,12 +204,32 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
         });
     };
     /**
+     * Loads currently using database
+     */
+    AbstractSqliteQueryRunner.prototype.getCurrentDatabase = function () {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            return tslib_1.__generator(this, function (_a) {
+                return [2 /*return*/, Promise.resolve(undefined)];
+            });
+        });
+    };
+    /**
      * Checks if schema with the given name exist.
      */
     AbstractSqliteQueryRunner.prototype.hasSchema = function (schema) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("This driver does not support table schemas");
+                throw new error_1.TypeORMError("This driver does not support table schemas");
+            });
+        });
+    };
+    /**
+     * Loads currently using database schema
+     */
+    AbstractSqliteQueryRunner.prototype.getCurrentSchema = function () {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            return tslib_1.__generator(this, function (_a) {
+                return [2 /*return*/, Promise.resolve(undefined)];
             });
         });
     };
@@ -224,7 +294,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
     /**
      * Creates a new table schema.
      */
-    AbstractSqliteQueryRunner.prototype.createSchema = function (schema, ifNotExist) {
+    AbstractSqliteQueryRunner.prototype.createSchema = function (schemaPath, ifNotExist) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
                 return [2 /*return*/, Promise.resolve()];
@@ -270,7 +340,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                             table.indices.forEach(function (index) {
                                 // new index may be passed without name. In this case we generate index name manually.
                                 if (!index.name)
-                                    index.name = _this.connection.namingStrategy.indexName(table.name, index.columnNames, index.where);
+                                    index.name = _this.connection.namingStrategy.indexName(table, index.columnNames, index.where);
                                 upQueries.push(_this.createIndexSql(table, index));
                                 downQueries.push(_this.dropIndexSql(index));
                             });
@@ -415,7 +485,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         });
                         // rename foreign key constraints
                         newTable.foreignKeys.forEach(function (foreignKey) {
-                            foreignKey.name = _this.connection.namingStrategy.foreignKeyName(newTable, foreignKey.columnNames, foreignKey.referencedTableName, foreignKey.referencedColumnNames);
+                            foreignKey.name = _this.connection.namingStrategy.foreignKeyName(newTable, foreignKey.columnNames, _this.getTablePath(foreignKey), foreignKey.referencedColumnNames);
                         });
                         // rename indices
                         newTable.indices.forEach(function (index) {
@@ -502,7 +572,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         oldColumn = oldTableColumnOrName instanceof TableColumn_1.TableColumn ? oldTableColumnOrName : table.columns.find(function (c) { return c.name === oldTableColumnOrName; });
                         if (!oldColumn)
-                            throw new Error("Column \"" + oldTableColumnOrName + "\" was not found in the \"" + table.name + "\" table.");
+                            throw new error_1.TypeORMError("Column \"" + oldTableColumnOrName + "\" was not found in the \"" + table.name + "\" table.");
                         newColumn = undefined;
                         if (newTableColumnOrName instanceof TableColumn_1.TableColumn) {
                             newColumn = newTableColumnOrName;
@@ -536,7 +606,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         oldColumn = oldTableColumnOrName instanceof TableColumn_1.TableColumn ? oldTableColumnOrName : table.columns.find(function (c) { return c.name === oldTableColumnOrName; });
                         if (!oldColumn)
-                            throw new Error("Column \"" + oldTableColumnOrName + "\" was not found in the \"" + table.name + "\" table.");
+                            throw new error_1.TypeORMError("Column \"" + oldTableColumnOrName + "\" was not found in the \"" + table.name + "\" table.");
                         return [4 /*yield*/, this.changeColumns(table, [{ oldColumn: oldColumn, newColumn: newColumn }])];
                     case 4:
                         _b.sent();
@@ -576,7 +646,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                                 changedTable.findColumnForeignKeys(changedColumnSet.oldColumn).forEach(function (fk) {
                                     fk.columnNames.splice(fk.columnNames.indexOf(changedColumnSet.oldColumn.name), 1);
                                     fk.columnNames.push(changedColumnSet.newColumn.name);
-                                    fk.name = _this.connection.namingStrategy.foreignKeyName(changedTable, fk.columnNames, fk.referencedTableName, fk.referencedColumnNames);
+                                    fk.name = _this.connection.namingStrategy.foreignKeyName(changedTable, fk.columnNames, _this.getTablePath(fk), fk.referencedColumnNames);
                                 });
                                 changedTable.findColumnIndices(changedColumnSet.oldColumn).forEach(function (index) {
                                     index.columnNames.splice(index.columnNames.indexOf(changedColumnSet.oldColumn.name), 1);
@@ -616,7 +686,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         column = columnOrName instanceof TableColumn_1.TableColumn ? columnOrName : table.findColumnByName(columnOrName);
                         if (!column)
-                            throw new Error("Column \"" + columnOrName + "\" was not found in table \"" + table.name + "\"");
+                            throw new error_1.TypeORMError("Column \"" + columnOrName + "\" was not found in table \"" + table.name + "\"");
                         return [4 /*yield*/, this.dropColumns(table, [column])];
                     case 4:
                         _b.sent();
@@ -645,21 +715,17 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         changedTable = table.clone();
                         columns.forEach(function (column) {
-                            changedTable.removeColumn(column);
-                            changedTable.findColumnUniques(column).forEach(function (unique) { return changedTable.removeUniqueConstraint(unique); });
-                            changedTable.findColumnIndices(column).forEach(function (index) { return changedTable.removeIndex(index); });
-                            changedTable.findColumnForeignKeys(column).forEach(function (fk) { return changedTable.removeForeignKey(fk); });
+                            var columnInstance = column instanceof TableColumn_1.TableColumn ? column : table.findColumnByName(column);
+                            if (!columnInstance)
+                                throw new Error("Column \"" + column + "\" was not found in table \"" + table.name + "\"");
+                            changedTable.removeColumn(columnInstance);
+                            changedTable.findColumnUniques(columnInstance).forEach(function (unique) { return changedTable.removeUniqueConstraint(unique); });
+                            changedTable.findColumnIndices(columnInstance).forEach(function (index) { return changedTable.removeIndex(index); });
+                            changedTable.findColumnForeignKeys(columnInstance).forEach(function (fk) { return changedTable.removeForeignKey(fk); });
                         });
                         return [4 /*yield*/, this.recreateTable(changedTable, table)];
                     case 4:
                         _b.sent();
-                        // remove column and its constraints from original table.
-                        columns.forEach(function (column) {
-                            table.removeColumn(column);
-                            table.findColumnUniques(column).forEach(function (unique) { return table.removeUniqueConstraint(unique); });
-                            table.findColumnIndices(column).forEach(function (index) { return table.removeIndex(index); });
-                            table.findColumnForeignKeys(column).forEach(function (fk) { return table.removeForeignKey(fk); });
-                        });
                         return [2 /*return*/];
                 }
             });
@@ -813,7 +879,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         uniqueConstraint = uniqueOrName instanceof TableUnique_1.TableUnique ? uniqueOrName : table.uniques.find(function (u) { return u.name === uniqueOrName; });
                         if (!uniqueConstraint)
-                            throw new Error("Supplied unique constraint was not found in table " + table.name);
+                            throw new error_1.TypeORMError("Supplied unique constraint was not found in table " + table.name);
                         return [4 /*yield*/, this.dropUniqueConstraints(table, [uniqueConstraint])];
                     case 4:
                         _b.sent();
@@ -913,7 +979,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         checkConstraint = checkOrName instanceof TableCheck_1.TableCheck ? checkOrName : table.checks.find(function (c) { return c.name === checkOrName; });
                         if (!checkConstraint)
-                            throw new Error("Supplied check constraint was not found in table " + table.name);
+                            throw new error_1.TypeORMError("Supplied check constraint was not found in table " + table.name);
                         return [4 /*yield*/, this.dropCheckConstraints(table, [checkConstraint])];
                     case 4:
                         _b.sent();
@@ -956,7 +1022,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
     AbstractSqliteQueryRunner.prototype.createExclusionConstraint = function (tableOrName, exclusionConstraint) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("Sqlite does not support exclusion constraints.");
+                throw new error_1.TypeORMError("Sqlite does not support exclusion constraints.");
             });
         });
     };
@@ -966,7 +1032,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
     AbstractSqliteQueryRunner.prototype.createExclusionConstraints = function (tableOrName, exclusionConstraints) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("Sqlite does not support exclusion constraints.");
+                throw new error_1.TypeORMError("Sqlite does not support exclusion constraints.");
             });
         });
     };
@@ -976,7 +1042,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
     AbstractSqliteQueryRunner.prototype.dropExclusionConstraint = function (tableOrName, exclusionOrName) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("Sqlite does not support exclusion constraints.");
+                throw new error_1.TypeORMError("Sqlite does not support exclusion constraints.");
             });
         });
     };
@@ -986,7 +1052,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
     AbstractSqliteQueryRunner.prototype.dropExclusionConstraints = function (tableOrName, exclusionConstraints) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("Sqlite does not support exclusion constraints.");
+                throw new error_1.TypeORMError("Sqlite does not support exclusion constraints.");
             });
         });
     };
@@ -1053,7 +1119,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         foreignKey = foreignKeyOrName instanceof TableForeignKey_1.TableForeignKey ? foreignKeyOrName : table.foreignKeys.find(function (fk) { return fk.name === foreignKeyOrName; });
                         if (!foreignKey)
-                            throw new Error("Supplied foreign key was not found in table " + table.name);
+                            throw new error_1.TypeORMError("Supplied foreign key was not found in table " + table.name);
                         return [4 /*yield*/, this.dropForeignKeys(tableOrName, [foreignKey])];
                     case 4:
                         _b.sent();
@@ -1110,7 +1176,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         // new index may be passed without name. In this case we generate index name manually.
                         if (!index.name)
-                            index.name = this.connection.namingStrategy.indexName(table.name, index.columnNames, index.where);
+                            index.name = this.connection.namingStrategy.indexName(table, index.columnNames, index.where);
                         up = this.createIndexSql(table, index);
                         down = this.dropIndexSql(index);
                         return [4 /*yield*/, this.executeQueries(up, down)];
@@ -1161,7 +1227,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         index = indexOrName instanceof TableIndex_1.TableIndex ? indexOrName : table.indices.find(function (i) { return i.name === indexOrName; });
                         if (!index)
-                            throw new Error("Supplied index was not found in table " + table.name);
+                            throw new error_1.TypeORMError("Supplied index was not found in table " + table.name);
                         up = this.dropIndexSql(index);
                         down = this.createIndexSql(table, index);
                         return [4 /*yield*/, this.executeQueries(up, down)];
@@ -1213,7 +1279,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
      */
     AbstractSqliteQueryRunner.prototype.clearDatabase = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var selectViewDropsQuery, dropViewQueries, selectTableDropsQuery, dropTableQueries, error_1, rollbackError_1;
+            var selectViewDropsQuery, dropViewQueries, selectTableDropsQuery, dropTableQueries, error_2, rollbackError_1;
             var _this = this;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
@@ -1245,7 +1311,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         _a.sent();
                         return [3 /*break*/, 16];
                     case 9:
-                        error_1 = _a.sent();
+                        error_2 = _a.sent();
                         _a.label = 10;
                     case 10:
                         _a.trys.push([10, 12, , 13]);
@@ -1256,7 +1322,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                     case 12:
                         rollbackError_1 = _a.sent();
                         return [3 /*break*/, 13];
-                    case 13: throw error_1;
+                    case 13: throw error_2;
                     case 14: return [4 /*yield*/, this.query("PRAGMA foreign_keys = ON;")];
                     case 15:
                         _a.sent();
@@ -1277,8 +1343,12 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                     case 0: return [4 /*yield*/, this.hasTable(this.getTypeormMetadataTableName())];
                     case 1:
                         hasTable = _a.sent();
-                        if (!hasTable)
-                            return [2 /*return*/, Promise.resolve([])];
+                        if (!hasTable) {
+                            return [2 /*return*/, []];
+                        }
+                        if (!viewNames) {
+                            viewNames = [];
+                        }
                         viewNamesString = viewNames.map(function (name) { return "'" + name + "'"; }).join(", ");
                         query = "SELECT \"t\".* FROM \"" + this.getTypeormMetadataTableName() + "\" \"t\" INNER JOIN \"sqlite_master\" s ON \"s\".\"name\" = \"t\".\"name\" AND \"s\".\"type\" = 'view' WHERE \"t\".\"type\" = 'VIEW'";
                         if (viewNamesString.length > 0)
@@ -1301,32 +1371,56 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
      */
     AbstractSqliteQueryRunner.prototype.loadTables = function (tableNames) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var tableNamesString, dbTables, dbIndicesDef;
+            var dbTables, tablesSql, _a, _b, _c, _d, tableNamesString_1, tablesSql, _e, _f, _g, _h, tableNamesString, dbIndicesDef;
             var _this = this;
-            return tslib_1.__generator(this, function (_a) {
-                switch (_a.label) {
+            return tslib_1.__generator(this, function (_j) {
+                switch (_j.label) {
                     case 0:
                         // if no tables given then no need to proceed
-                        if (!tableNames || !tableNames.length)
+                        if (tableNames && tableNames.length === 0) {
                             return [2 /*return*/, []];
-                        tableNamesString = tableNames.map(function (tableName) { return "'" + tableName + "'"; }).join(", ");
-                        return [4 /*yield*/, this.query("SELECT * FROM \"sqlite_master\" WHERE \"type\" = 'table' AND \"name\" IN (" + tableNamesString + ")")];
+                        }
+                        dbTables = [];
+                        if (!!tableNames) return [3 /*break*/, 2];
+                        tablesSql = "SELECT * FROM \"sqlite_master\" WHERE \"type\" = 'table'";
+                        _b = (_a = dbTables.push).apply;
+                        _c = [dbTables];
+                        _d = [[]];
+                        return [4 /*yield*/, this.query(tablesSql)];
                     case 1:
-                        dbTables = _a.sent();
-                        return [4 /*yield*/, this.query("SELECT * FROM \"sqlite_master\" WHERE \"type\" = 'index' AND \"tbl_name\" IN (" + tableNamesString + ")")];
+                        _b.apply(_a, _c.concat([tslib_1.__spreadArray.apply(void 0, _d.concat([tslib_1.__read.apply(void 0, [_j.sent()])]))]));
+                        return [3 /*break*/, 4];
                     case 2:
-                        dbIndicesDef = _a.sent();
+                        tableNamesString_1 = tableNames.map(function (tableName) { return "'" + tableName + "'"; }).join(", ");
+                        tablesSql = "SELECT * FROM \"sqlite_master\" WHERE \"type\" = 'table' AND \"name\" IN (" + tableNamesString_1 + ")";
+                        _f = (_e = dbTables.push).apply;
+                        _g = [dbTables];
+                        _h = [[]];
+                        return [4 /*yield*/, this.query(tablesSql)];
+                    case 3:
+                        _f.apply(_e, _g.concat([tslib_1.__spreadArray.apply(void 0, _h.concat([tslib_1.__read.apply(void 0, [_j.sent()])]))]));
+                        _j.label = 4;
+                    case 4:
                         // if tables were not found in the db, no need to proceed
-                        if (!dbTables || !dbTables.length)
+                        if (dbTables.length === 0) {
                             return [2 /*return*/, []];
+                        }
+                        tableNamesString = dbTables.map(function (_a) {
+                            var name = _a.name;
+                            return "'" + name + "'";
+                        }).join(", ");
+                        return [4 /*yield*/, this.query("SELECT * FROM \"sqlite_master\" WHERE \"type\" = 'index' AND \"tbl_name\" IN (" + tableNamesString + ")")];
+                    case 5:
+                        dbIndicesDef = _j.sent();
                         // create table schemas for loaded tables
                         return [2 /*return*/, Promise.all(dbTables.map(function (dbTable) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
-                                var table, sql, _a, dbColumns, dbIndices, dbForeignKeys, autoIncrementColumnName, tableSql, autoIncrementIndex, comma, bracket, tableForeignKeyConstraints, tableUniquePromises, _b, result, regexp, indicesPromises, indices;
+                                var table, sql, _a, dbColumns, dbIndices, dbForeignKeys, autoIncrementColumnName, tableSql, autoIncrementIndex, comma, bracket, tableForeignKeyConstraints, uniqueRegexResult, uniqueMappings, uniqueRegex, tableUniquePromises, _b, result, regexp, indicesPromises, indices;
                                 var _this = this;
                                 return tslib_1.__generator(this, function (_c) {
                                     switch (_c.label) {
                                         case 0:
-                                            table = new Table_1.Table({ name: dbTable["name"] });
+                                            table = new Table_1.Table();
+                                            table.name = dbTable["name"];
                                             sql = dbTable["sql"];
                                             return [4 /*yield*/, Promise.all([
                                                     this.query("PRAGMA table_info(\"" + dbTable["name"] + "\")"),
@@ -1372,20 +1466,33 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                                                     var enumMatch = sql.match(new RegExp("\"(" + tableColumn.name + ")\" varchar CHECK\\s*\\(\\s*\\1\\s+IN\\s*\\(('[^']+'(?:\\s*,\\s*'[^']+')+)\\s*\\)\\s*\\)"));
                                                     if (enumMatch) {
                                                         // This is an enum
-                                                        tableColumn.type = "simple-enum";
                                                         tableColumn.enum = enumMatch[2].substr(1, enumMatch[2].length - 2).split("','");
                                                     }
                                                 }
-                                                // parse datatype and attempt to retrieve length
+                                                // parse datatype and attempt to retrieve length, precision and scale
                                                 var pos = tableColumn.type.indexOf("(");
                                                 if (pos !== -1) {
-                                                    var dataType_1 = tableColumn.type.substr(0, pos);
+                                                    var fullType = tableColumn.type;
+                                                    var dataType_1 = fullType.substr(0, pos);
                                                     if (!!_this.driver.withLengthColumnTypes.find(function (col) { return col === dataType_1; })) {
-                                                        var len = parseInt(tableColumn.type.substring(pos + 1, tableColumn.type.length - 1));
+                                                        var len = parseInt(fullType.substring(pos + 1, fullType.length - 1));
                                                         if (len) {
                                                             tableColumn.length = len.toString();
                                                             tableColumn.type = dataType_1; // remove the length part from the datatype
                                                         }
+                                                    }
+                                                    if (!!_this.driver.withPrecisionColumnTypes.find(function (col) { return col === dataType_1; })) {
+                                                        var re = new RegExp("^" + dataType_1 + "\\((\\d+),?\\s?(\\d+)?\\)");
+                                                        var matches = fullType.match(re);
+                                                        if (matches && matches[1]) {
+                                                            tableColumn.precision = +matches[1];
+                                                        }
+                                                        if (!!_this.driver.withScaleColumnTypes.find(function (col) { return col === dataType_1; })) {
+                                                            if (matches && matches[2]) {
+                                                                tableColumn.scale = +matches[2];
+                                                            }
+                                                        }
+                                                        tableColumn.type = dataType_1; // remove the precision/scale part from the datatype
                                                     }
                                                 }
                                                 return tableColumn;
@@ -1406,12 +1513,20 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                                                     onUpdate: foreignKey["on_update"]
                                                 });
                                             });
+                                            uniqueMappings = [];
+                                            uniqueRegex = /CONSTRAINT "([^"]*)" UNIQUE \((.*?)\)/g;
+                                            while ((uniqueRegexResult = uniqueRegex.exec(sql)) !== null) {
+                                                uniqueMappings.push({
+                                                    name: uniqueRegexResult[1],
+                                                    columns: uniqueRegexResult[2].substr(1, uniqueRegexResult[2].length - 2).split("\", \"")
+                                                });
+                                            }
                                             tableUniquePromises = dbIndices
                                                 .filter(function (dbIndex) { return dbIndex["origin"] === "u"; })
                                                 .map(function (dbIndex) { return dbIndex["name"]; })
                                                 .filter(function (value, index, self) { return self.indexOf(value) === index; })
                                                 .map(function (dbIndexName) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
-                                                var dbIndex, indexInfos, indexColumns, column;
+                                                var dbIndex, indexInfos, indexColumns, column, foundMapping;
                                                 return tslib_1.__generator(this, function (_a) {
                                                     switch (_a.label) {
                                                         case 0:
@@ -1429,9 +1544,13 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                                                                 if (column)
                                                                     column.isUnique = true;
                                                             }
-                                                            // Sqlite does not store unique constraint name, so we generate its name manually.
+                                                            foundMapping = uniqueMappings.find(function (mapping) {
+                                                                return mapping.columns.every(function (column) {
+                                                                    return indexColumns.indexOf(column) !== -1;
+                                                                });
+                                                            });
                                                             return [2 /*return*/, new TableUnique_1.TableUnique({
-                                                                    name: this.connection.namingStrategy.uniqueConstraintName(table, indexColumns),
+                                                                    name: foundMapping ? foundMapping.name : this.connection.namingStrategy.uniqueConstraintName(table, indexColumns),
                                                                     columnNames: indexColumns
                                                                 })];
                                                     }
@@ -1495,7 +1614,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
         var hasAutoIncrement = primaryColumns.find(function (column) { return column.isGenerated && column.generationStrategy === "increment"; });
         var skipPrimary = primaryColumns.length > 1;
         if (skipPrimary && hasAutoIncrement)
-            throw new Error("Sqlite does not support AUTOINCREMENT on composite primary key");
+            throw new error_1.TypeORMError("Sqlite does not support AUTOINCREMENT on composite primary key");
         var columnDefinitions = table.columns.map(function (column) { return _this.buildCreateColumnSql(column, skipPrimary); }).join(", ");
         var sql = "CREATE TABLE \"" + table.name + "\" (" + columnDefinitions;
         // need for `addColumn()` method, because it recreates table.
@@ -1505,13 +1624,13 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
             var isUniqueExist = table.uniques.some(function (unique) { return unique.columnNames.length === 1 && unique.columnNames[0] === column.name; });
             if (!isUniqueExist)
                 table.uniques.push(new TableUnique_1.TableUnique({
-                    name: _this.connection.namingStrategy.uniqueConstraintName(table.name, [column.name]),
+                    name: _this.connection.namingStrategy.uniqueConstraintName(table, [column.name]),
                     columnNames: [column.name]
                 }));
         });
         if (table.uniques.length > 0) {
             var uniquesSql = table.uniques.map(function (unique) {
-                var uniqueName = unique.name ? unique.name : _this.connection.namingStrategy.uniqueConstraintName(table.name, unique.columnNames);
+                var uniqueName = unique.name ? unique.name : _this.connection.namingStrategy.uniqueConstraintName(table, unique.columnNames);
                 var columnNames = unique.columnNames.map(function (columnName) { return "\"" + columnName + "\""; }).join(", ");
                 return "CONSTRAINT \"" + uniqueName + "\" UNIQUE (" + columnNames + ")";
             }).join(", ");
@@ -1519,7 +1638,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
         }
         if (table.checks.length > 0) {
             var checksSql = table.checks.map(function (check) {
-                var checkName = check.name ? check.name : _this.connection.namingStrategy.checkConstraintName(table.name, check.expression);
+                var checkName = check.name ? check.name : _this.connection.namingStrategy.checkConstraintName(table, check.expression);
                 return "CONSTRAINT \"" + checkName + "\" CHECK (" + check.expression + ")";
             }).join(", ");
             sql += ", " + checksSql;
@@ -1528,7 +1647,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
             var foreignKeysSql = table.foreignKeys.map(function (fk) {
                 var columnNames = fk.columnNames.map(function (columnName) { return "\"" + columnName + "\""; }).join(", ");
                 if (!fk.name)
-                    fk.name = _this.connection.namingStrategy.foreignKeyName(table.name, fk.columnNames, fk.referencedTableName, fk.referencedColumnNames);
+                    fk.name = _this.connection.namingStrategy.foreignKeyName(table, fk.columnNames, _this.getTablePath(fk), fk.referencedColumnNames);
                 var referencedColumnNames = fk.referencedColumnNames.map(function (columnName) { return "\"" + columnName + "\""; }).join(", ");
                 var constraint = "CONSTRAINT \"" + fk.name + "\" FOREIGN KEY (" + columnNames + ") REFERENCES \"" + fk.referencedTableName + "\" (" + referencedColumnNames + ")";
                 if (fk.onDelete)
@@ -1544,7 +1663,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
             sql += ", PRIMARY KEY (" + columnNames + ")";
         }
         sql += ")";
-        var tableMetadata = this.connection.entityMetadatas.find(function (metadata) { return metadata.tableName === table.name; });
+        var tableMetadata = this.connection.entityMetadatas.find(function (metadata) { return _this.getTablePath(table) === _this.getTablePath(metadata); });
         if (tableMetadata && tableMetadata.withoutRowid) {
             sql += " WITHOUT ROWID";
         }
@@ -1682,7 +1801,7 @@ var AbstractSqliteQueryRunner = /** @class */ (function (_super) {
                         newTable.indices.forEach(function (index) {
                             // new index may be passed without name. In this case we generate index name manually.
                             if (!index.name)
-                                index.name = _this.connection.namingStrategy.indexName(newTable.name, index.columnNames, index.where);
+                                index.name = _this.connection.namingStrategy.indexName(newTable, index.columnNames, index.where);
                             upQueries.push(_this.createIndexSql(newTable, index));
                             downQueries.push(_this.dropIndexSql(index));
                         });

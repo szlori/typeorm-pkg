@@ -6,7 +6,7 @@ import { Table } from "../../schema-builder/table/Table";
 import { TableForeignKey } from "../../schema-builder/table/TableForeignKey";
 import { TableIndex } from "../../schema-builder/table/TableIndex";
 import { View } from "../../schema-builder/view/View";
-import { AggregationCursor, BulkWriteOpResultObject, ChangeStream, ChangeStreamOptions, Code, Collection, CollectionAggregationOptions, CollectionBulkWriteOptions, CollectionInsertManyOptions, CollectionInsertOneOptions, CollectionOptions, CollStats, CommandCursor, Cursor, Db, DeleteWriteOpResultObject, FindAndModifyWriteOpResultObject, FindOneAndReplaceOption, GeoHaystackSearchOptions, GeoNearOptions, InsertOneWriteOpResult, InsertWriteOpResult, MapReduceOptions, MongoCountPreferences, MongodbIndexOptions, OrderedBulkOperation, ParallelCollectionScanOptions, ReadPreference, ReplaceOneOptions, UnorderedBulkOperation, UpdateWriteOpResult } from "./typings";
+import { AggregationCursor, BulkWriteOpResultObject, ChangeStream, ChangeStreamOptions, Code, Collection, CollectionAggregationOptions, CollectionBulkWriteOptions, CollectionInsertManyOptions, CollectionInsertOneOptions, CollectionOptions, CollStats, CommandCursor, Cursor, DeleteWriteOpResultObject, FindAndModifyWriteOpResultObject, FindOneAndReplaceOption, GeoHaystackSearchOptions, GeoNearOptions, InsertOneWriteOpResult, InsertWriteOpResult, MapReduceOptions, MongoClient, MongoCountPreferences, MongodbIndexOptions, OrderedBulkOperation, ParallelCollectionScanOptions, ReadPreference, ReplaceOneOptions, UnorderedBulkOperation, UpdateWriteOpResult } from "./typings";
 import { Connection } from "../../connection/Connection";
 import { ReadStream } from "../../platform/PlatformTools";
 import { MongoEntityManager } from "../../entity-manager/MongoEntityManager";
@@ -58,8 +58,8 @@ export declare class MongoQueryRunner implements QueryRunner {
     /**
      * Real database connection from a connection pool used to perform queries.
      */
-    databaseConnection: Db;
-    constructor(connection: Connection, databaseConnection: Db);
+    databaseConnection: MongoClient;
+    constructor(connection: Connection, databaseConnection: MongoClient);
     /**
      * Creates a cursor for a query that can be used to iterate over results from MongoDB.
      */
@@ -285,7 +285,7 @@ export declare class MongoQueryRunner implements QueryRunner {
 
     async delete(collectionName: string, conditions: ObjectLiteral|ObjectLiteral[]|string, maybeParameters?: any[]): Promise<any> { // todo: fix any
         if (typeof conditions === "string")
-            throw new Error(`String condition is not supported by MongoDB driver.`);
+            throw new TypeORMError(`String condition is not supported by MongoDB driver.`);
 
         await this.databaseConnection
             .collection(collectionName)
@@ -321,9 +321,17 @@ export declare class MongoQueryRunner implements QueryRunner {
      */
     hasDatabase(database: string): Promise<boolean>;
     /**
+     * Loads currently using database
+     */
+    getCurrentDatabase(): Promise<undefined>;
+    /**
      * Checks if schema with the given name exist.
      */
     hasSchema(schema: string): Promise<boolean>;
+    /**
+     * Loads currently using database schema
+     */
+    getCurrentSchema(): Promise<undefined>;
     /**
      * Checks if table with the given name exist in the database.
      */
@@ -343,7 +351,7 @@ export declare class MongoQueryRunner implements QueryRunner {
     /**
      * Creates a new table schema.
      */
-    createSchema(schema: string, ifNotExist?: boolean): Promise<void>;
+    createSchema(schemaPath: string, ifNotExist?: boolean): Promise<void>;
     /**
      * Drops table schema.
      */
@@ -398,7 +406,7 @@ export declare class MongoQueryRunner implements QueryRunner {
     /**
      * Drops the columns in the table.
      */
-    dropColumns(tableOrName: Table | string, columns: TableColumn[]): Promise<void>;
+    dropColumns(tableOrName: Table | string, columns: TableColumn[] | string[]): Promise<void>;
     /**
      * Creates a new primary key.
      */

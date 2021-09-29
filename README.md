@@ -16,7 +16,7 @@
     <a href="https://codecov.io/gh/typeorm/typeorm">
         <img alt="Codecov" src="https://img.shields.io/codecov/c/github/typeorm/typeorm.svg">
     </a>
-	<a href="https://join.slack.com/t/typeorm/shared_invite/zt-gej3gc00-hR~L~DqGUJ7qOpGy4SSq3g">
+	<a href="https://join.slack.com/t/typeorm/shared_invite/zt-uu12ljeb-OH_0086I379fUDApYJHNuw">
 		<img src="https://img.shields.io/badge/chat-on%20slack-blue.svg">
 	</a>
   <br>
@@ -38,11 +38,6 @@ maintainable applications the most productive way.
 
 TypeORM is highly influenced by other ORMs, such as [Hibernate](http://hibernate.org/orm/),
  [Doctrine](http://www.doctrine-project.org/) and [Entity Framework](https://www.asp.net/entity-framework).
- 
-## Sponsors
- 
-TypeORM is being sponsored by the following partner:
-<a href="https://tracking.gitads.io/?repo=typeorm"> <img src="https://images.gitads.io/typeorm" alt="GitAds" style="width: 100%; margin-top: 20px;"/> </a>
 
 ## Features
 
@@ -88,7 +83,7 @@ And more...
 With TypeORM your models look like this:
 
 ```javascript
-import {Entity, PrimaryGeneratedColumn, Column} from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
 
 @Entity()
 export class User {
@@ -129,7 +124,7 @@ await repository.remove(timber);
 Alternatively, if you prefer to use the `ActiveRecord` implementation, you can use it as well:
 
 ```javascript
-import {Entity, PrimaryGeneratedColumn, Column, BaseEntity} from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, BaseEntity } from "typeorm";
 
 @Entity()
 export class User extends BaseEntity {
@@ -216,16 +211,15 @@ await timber.remove();
     * for **SAP Hana**
 
         ```
-        npm config set @sap:registry https://npm.sap.com
         npm i @sap/hana-client
 		npm i hdb-pool
         ```
-        
+
         *SAP Hana support made possible by sponsorship of [Neptune Software](https://www.neptune-software.com/).*
 
     * for **MongoDB** (experimental)
 
-        `npm install mongodb --save`
+        `npm install mongodb@^3.6.0 --save`
 
     * for **NativeScript**, **react-native** and **Cordova**
 
@@ -333,6 +327,9 @@ creating more entities.
 > You can generate an even more advanced project with express installed by running
 `typeorm init --name MyProject --database mysql --express` command.
 
+> You can generate docker-compose file by running
+`typeorm init --name MyProject --database postgres --docker` command.
+
 ## Step-by-Step Guide
 
 What are you expecting from ORM?
@@ -376,7 +373,7 @@ You can load/insert/update/remove and perform other operations with them.
 Let's make our `Photo` model as an entity:
 
 ```javascript
-import {Entity} from "typeorm";
+import { Entity } from "typeorm";
 
 @Entity()
 export class Photo {
@@ -399,7 +396,7 @@ To add database columns, you simply need to decorate an entity's properties you 
 with a `@Column` decorator.
 
 ```javascript
-import {Entity, Column} from "typeorm";
+import { Entity, Column } from "typeorm";
 
 @Entity()
 export class Photo {
@@ -439,7 +436,7 @@ This is a requirement and you can't avoid it.
 To make a column a primary key, you need to use `@PrimaryColumn` decorator.
 
 ```javascript
-import {Entity, Column, PrimaryColumn} from "typeorm";
+import { Entity, Column, PrimaryColumn } from "typeorm";
 
 @Entity()
 export class Photo {
@@ -470,7 +467,7 @@ Now, let's say you want your id column to be auto-generated (this is known as au
 To do that, you need to change the `@PrimaryColumn` decorator to a `@PrimaryGeneratedColumn` decorator:
 
 ```javascript
-import {Entity, Column, PrimaryGeneratedColumn} from "typeorm";
+import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class Photo {
@@ -503,7 +500,7 @@ We don't want all our columns to be limited varchars or integers.
 Let's setup correct data types:
 
 ```javascript
-import {Entity, Column, PrimaryGeneratedColumn} from "typeorm";
+import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class Photo {
@@ -540,8 +537,8 @@ Now, when our entity is created, let's create an `index.ts` (or `app.ts` whateve
 
 ```javascript
 import "reflect-metadata";
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
 
 createConnection({
     type: "mysql",
@@ -577,7 +574,7 @@ Later, when we create more entities we need to add them to the entities in our c
 This is not very convenient, so instead we can set up the whole directory, from where all entities will be connected and used in our connection:
 
 ```javascript
-import {createConnection} from "typeorm";
+import { createConnection } from "typeorm";
 
 createConnection({
     type: "mysql",
@@ -625,8 +622,8 @@ Now if you run your `index.ts`, a connection with database will be initialized a
 Now let's create a new photo to save it in the database:
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
 
 createConnection(/*...*/).then(connection => {
 
@@ -655,8 +652,8 @@ It's not a new copy of the object, it modifies its "id" and returns it.
 Let's take advantage of the latest ES8 (ES2017) features and use async/await syntax instead:
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
 
 createConnection(/*...*/).then(async connection => {
 
@@ -681,8 +678,8 @@ Using entity manager you can manipulate any entity in your app.
 For example, let's load our saved entity:
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
 
 createConnection(/*...*/).then(async connection => {
 
@@ -705,8 +702,8 @@ When you deal with entities a lot, Repositories are more convenient to use than 
 
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
 
 createConnection(/*...*/).then(async connection => {
 
@@ -735,8 +732,8 @@ Learn more about Repository [here](./docs/working-with-repository.md).
 Let's try more load operations using the Repository:
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
 
 createConnection(/*...*/).then(async connection => {
 
@@ -768,8 +765,8 @@ createConnection(/*...*/).then(async connection => {
 Now let's load a single photo from the database, update it and save it:
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
 
 createConnection(/*...*/).then(async connection => {
 
@@ -788,8 +785,8 @@ Now photo with `id = 1` will be updated in the database.
 Now let's remove our photo from the database:
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
 
 createConnection(/*...*/).then(async connection => {
 
@@ -808,8 +805,8 @@ Let's create a one-to-one relation with another class.
 Let's create a new class in `PhotoMetadata.ts`. This PhotoMetadata class is supposed to contain our photo's additional meta-information:
 
 ```javascript
-import {Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn} from "typeorm";
-import {Photo} from "./Photo";
+import { Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn } from "typeorm";
+import { Photo } from "./Photo";
 
 @Entity()
 export class PhotoMetadata {
@@ -870,9 +867,9 @@ If you run the app, you'll see a newly generated table, and it will contain a co
 Now let's save a photo, its metadata and attach them to each other.
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
-import {PhotoMetadata} from "./entity/PhotoMetadata";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
+import { PhotoMetadata } from "./entity/PhotoMetadata";
 
 createConnection(/*...*/).then(async connection => {
 
@@ -881,6 +878,7 @@ createConnection(/*...*/).then(async connection => {
     photo.name = "Me and Bears";
     photo.description = "I am near polar bears";
     photo.filename = "photo-with-bears.jpg";
+    photo.views = 1;
     photo.isPublished = true;
 
     // create a photo metadata
@@ -918,8 +916,8 @@ To fix this issue we should add an inverse relation, and make relations between 
 Let's modify our entities:
 
 ```javascript
-import {Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn} from "typeorm";
-import {Photo} from "./Photo";
+import { Entity, Column, PrimaryGeneratedColumn, OneToOne, JoinColumn } from "typeorm";
+import { Photo } from "./Photo";
 
 @Entity()
 export class PhotoMetadata {
@@ -933,8 +931,8 @@ export class PhotoMetadata {
 ```
 
 ```javascript
-import {Entity, Column, PrimaryGeneratedColumn, OneToOne} from "typeorm";
-import {PhotoMetadata} from "./PhotoMetadata";
+import { Entity, Column, PrimaryGeneratedColumn, OneToOne } from "typeorm";
+import { PhotoMetadata } from "./PhotoMetadata";
 
 @Entity()
 export class Photo {
@@ -963,9 +961,9 @@ Let's use `find*` methods first.
 `find*` methods allow you to specify an object with the `FindOneOptions` / `FindManyOptions` interface.
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
-import {PhotoMetadata} from "./entity/PhotoMetadata";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
+import { PhotoMetadata } from "./entity/PhotoMetadata";
 
 createConnection(/*...*/).then(async connection => {
 
@@ -983,9 +981,9 @@ Using find options is good and dead simple, but if you need a more complex query
 `QueryBuilder` allows more complex queries to be used in an elegant way:
 
 ```javascript
-import {createConnection} from "typeorm";
-import {Photo} from "./entity/Photo";
-import {PhotoMetadata} from "./entity/PhotoMetadata";
+import { createConnection } from "typeorm";
+import { Photo } from "./entity/Photo";
+import { PhotoMetadata } from "./entity/PhotoMetadata";
 
 createConnection(/*...*/).then(async connection => {
 
@@ -1064,8 +1062,8 @@ Let's say a photo has one author, and each author can have many photos.
 First, let's create an `Author` class:
 
 ```javascript
-import {Entity, Column, PrimaryGeneratedColumn, OneToMany, JoinColumn} from "typeorm";
-import {Photo} from "./Photo";
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany, JoinColumn } from "typeorm";
+import { Photo } from "./Photo";
 
 @Entity()
 export class Author {
@@ -1087,9 +1085,9 @@ export class Author {
 Now let's add the owner side of the relation into the Photo entity:
 
 ```javascript
-import {Entity, Column, PrimaryGeneratedColumn, ManyToOne} from "typeorm";
-import {PhotoMetadata} from "./PhotoMetadata";
-import {Author} from "./Author";
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from "typeorm";
+import { PhotoMetadata } from "./PhotoMetadata";
+import { Author } from "./Author";
 
 @Entity()
 export class Photo {
@@ -1133,12 +1131,12 @@ It will also modify the `photo` table, adding a new `author` column and creating
 
 ### Creating a many-to-many relation
 
-Let's create a many-to-one / many-to-many relation.
+Let's create a many-to-many relation.
 Let's say a photo can be in many albums, and each album can contain many photos.
 Let's create an `Album` class:
 
 ```javascript
-import {Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable} from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from "typeorm";
 
 @Entity()
 export class Album {
@@ -1207,6 +1205,8 @@ let photo = new Photo();
 photo.name = "Me and Bears";
 photo.description = "I am near polar bears";
 photo.filename = "photo-with-bears.jpg";
+photo.views = 1
+photo.isPublished = true
 photo.albums = [album1, album2];
 await connection.manager.save(photo);
 
@@ -1293,6 +1293,8 @@ There are several extensions that simplify working with TypeORM and integrating 
 * [TypeORM integration](https://github.com/typeorm/typeorm-routing-controllers-extensions) with [routing-controllers](https://github.com/pleerock/routing-controllers)
 * Models generation from existing database - [typeorm-model-generator](https://github.com/Kononnable/typeorm-model-generator)
 * Fixtures loader - [typeorm-fixtures-cli](https://github.com/RobinCK/typeorm-fixtures)
+* ER Diagram generator - [typeorm-uml](https://github.com/eugene-manuilov/typeorm-uml/)
+* Create/Drop database - [typeorm-extension](https://github.com/Tada5hi/typeorm-extension)
 
 ## Contributing
 
@@ -1304,7 +1306,7 @@ This project exists thanks to all the people who contribute:
 
 ## Sponsors
 
-Open source is hard and time-consuming. If you want to invest into TypeORM's future you can become a sponsor and make our core team to spend more time on TypeORM's improvements and new features. [Become a sponsor](https://opencollective.com/typeorm)
+Open source is hard and time-consuming. If you want to invest into TypeORM's future you can become a sponsor and allow our core team to spend more time on TypeORM's improvements and new features. [Become a sponsor](https://opencollective.com/typeorm)
 
 <a href="https://opencollective.com/typeorm" target="_blank"><img src="https://opencollective.com/typeorm/tiers/sponsor.svg?width=890"></a>
 

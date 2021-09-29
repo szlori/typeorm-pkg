@@ -6,6 +6,9 @@ import { Table } from "../schema-builder/table/Table";
 import { EntityManager } from "../entity-manager/EntityManager";
 import { TableColumn } from "../schema-builder/table/TableColumn";
 import { Broadcaster } from "../subscriber/Broadcaster";
+import { ReplicationMode } from "../driver/types/ReplicationMode";
+import { EntityMetadata } from "../metadata/EntityMetadata";
+import { TableForeignKey } from "../schema-builder/table/TableForeignKey";
 export declare abstract class BaseQueryRunner {
     /**
      * Connection used by this query runner.
@@ -58,13 +61,14 @@ export declare abstract class BaseQueryRunner {
      * Used for replication.
      * If replication is not setup its value is ignored.
      */
-    protected mode: "master" | "slave";
+    protected mode: ReplicationMode;
+    private cachedTablePaths;
     /**
      * Executes a given SQL query.
      */
-    abstract query(query: string, parameters?: any[]): Promise<any>;
-    protected abstract loadTables(tablePaths: string[]): Promise<Table[]>;
-    protected abstract loadViews(tablePaths: string[]): Promise<View[]>;
+    abstract query(query: string, parameters?: any[], useStructuredResult?: boolean): Promise<any>;
+    protected abstract loadTables(tablePaths?: string[]): Promise<Table[]>;
+    protected abstract loadViews(tablePaths?: string[]): Promise<View[]>;
     /**
      * Loads given table's data from the database.
      */
@@ -72,7 +76,7 @@ export declare abstract class BaseQueryRunner {
     /**
      * Loads all tables (with given names) from the database.
      */
-    getTables(tableNames: string[]): Promise<Table[]>;
+    getTables(tableNames?: string[]): Promise<Table[]>;
     /**
      * Loads given view's data from the database.
      */
@@ -80,7 +84,7 @@ export declare abstract class BaseQueryRunner {
     /**
      * Loads given view's data from the database.
      */
-    getViews(viewPaths: string[]): Promise<View[]>;
+    getViews(viewPaths?: string[]): Promise<View[]>;
     /**
      * Enables special query runner mode in which sql queries won't be executed,
      * instead they will be memorized into a special variable inside query runner.
@@ -122,6 +126,7 @@ export declare abstract class BaseQueryRunner {
      * Replaces loaded table with given changed table.
      */
     protected replaceCachedTable(table: Table, changedTable: Table): void;
+    protected getTablePath(target: EntityMetadata | Table | View | TableForeignKey | string): string;
     protected getTypeormMetadataTableName(): string;
     /**
      * Checks if at least one of column properties was changed.
@@ -132,10 +137,6 @@ export declare abstract class BaseQueryRunner {
      * Checks if column length is by default.
      */
     protected isDefaultColumnLength(table: Table, column: TableColumn, length: string): boolean;
-    /**
-     * Checks if column display width is by default. Used only for MySQL.
-     */
-    protected isDefaultColumnWidth(table: Table, column: TableColumn, width: number): boolean;
     /**
      * Checks if column precision is by default.
      */

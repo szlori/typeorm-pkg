@@ -1,10 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuroraDataApiPostgresQueryRunner = void 0;
 var tslib_1 = require("tslib");
 var QueryRunnerAlreadyReleasedError_1 = require("../../error/QueryRunnerAlreadyReleasedError");
 var TransactionAlreadyStartedError_1 = require("../../error/TransactionAlreadyStartedError");
 var TransactionNotStartedError_1 = require("../../error/TransactionNotStartedError");
 var PostgresQueryRunner_1 = require("../postgres/PostgresQueryRunner");
+var BroadcasterResult_1 = require("../../subscriber/BroadcasterResult");
+var QueryResult_1 = require("../../query-runner/QueryResult");
 var PostgresQueryRunnerWrapper = /** @class */ (function (_super) {
     tslib_1.__extends(PostgresQueryRunnerWrapper, _super);
     function PostgresQueryRunnerWrapper(driver, mode) {
@@ -20,9 +23,10 @@ var AuroraDataApiPostgresQueryRunner = /** @class */ (function (_super) {
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
-    function AuroraDataApiPostgresQueryRunner(driver, mode) {
-        if (mode === void 0) { mode = "master"; }
-        return _super.call(this, driver, mode) || this;
+    function AuroraDataApiPostgresQueryRunner(driver, client, mode) {
+        var _this = _super.call(this, driver, mode) || this;
+        _this.client = client;
+        return _this;
     }
     // -------------------------------------------------------------------------
     // Public Methods
@@ -62,16 +66,32 @@ var AuroraDataApiPostgresQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiPostgresQueryRunner.prototype.startTransaction = function (isolationLevel) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var beforeBroadcastResult, afterBroadcastResult;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.isTransactionActive)
                             throw new TransactionAlreadyStartedError_1.TransactionAlreadyStartedError();
-                        this.isTransactionActive = true;
-                        return [4 /*yield*/, this.driver.client.startTransaction()];
+                        beforeBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastBeforeTransactionStartEvent(beforeBroadcastResult);
+                        if (!(beforeBroadcastResult.promises.length > 0)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, Promise.all(beforeBroadcastResult.promises)];
                     case 1:
                         _a.sent();
-                        return [2 /*return*/];
+                        _a.label = 2;
+                    case 2:
+                        this.isTransactionActive = true;
+                        return [4 /*yield*/, this.client.startTransaction()];
+                    case 3:
+                        _a.sent();
+                        afterBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastAfterTransactionStartEvent(afterBroadcastResult);
+                        if (!(afterBroadcastResult.promises.length > 0)) return [3 /*break*/, 5];
+                        return [4 /*yield*/, Promise.all(afterBroadcastResult.promises)];
+                    case 4:
+                        _a.sent();
+                        _a.label = 5;
+                    case 5: return [2 /*return*/];
                 }
             });
         });
@@ -82,16 +102,31 @@ var AuroraDataApiPostgresQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiPostgresQueryRunner.prototype.commitTransaction = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var beforeBroadcastResult, afterBroadcastResult;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isTransactionActive)
                             throw new TransactionNotStartedError_1.TransactionNotStartedError();
-                        return [4 /*yield*/, this.driver.client.commitTransaction()];
+                        beforeBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastBeforeTransactionCommitEvent(beforeBroadcastResult);
+                        if (!(beforeBroadcastResult.promises.length > 0)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, Promise.all(beforeBroadcastResult.promises)];
                     case 1:
                         _a.sent();
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, this.client.commitTransaction()];
+                    case 3:
+                        _a.sent();
                         this.isTransactionActive = false;
-                        return [2 /*return*/];
+                        afterBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastAfterTransactionCommitEvent(afterBroadcastResult);
+                        if (!(afterBroadcastResult.promises.length > 0)) return [3 /*break*/, 5];
+                        return [4 /*yield*/, Promise.all(afterBroadcastResult.promises)];
+                    case 4:
+                        _a.sent();
+                        _a.label = 5;
+                    case 5: return [2 /*return*/];
                 }
             });
         });
@@ -102,16 +137,30 @@ var AuroraDataApiPostgresQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiPostgresQueryRunner.prototype.rollbackTransaction = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var beforeBroadcastResult, afterBroadcastResult;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isTransactionActive)
                             throw new TransactionNotStartedError_1.TransactionNotStartedError();
-                        return [4 /*yield*/, this.driver.client.rollbackTransaction()];
+                        beforeBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastBeforeTransactionRollbackEvent(beforeBroadcastResult);
+                        if (!(beforeBroadcastResult.promises.length > 0)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, Promise.all(beforeBroadcastResult.promises)];
                     case 1:
                         _a.sent();
-                        this.isTransactionActive = false;
-                        return [2 /*return*/];
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, this.client.rollbackTransaction()];
+                    case 3:
+                        _a.sent();
+                        afterBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastAfterTransactionRollbackEvent(afterBroadcastResult);
+                        if (!(afterBroadcastResult.promises.length > 0)) return [3 /*break*/, 5];
+                        return [4 /*yield*/, Promise.all(afterBroadcastResult.promises)];
+                    case 4:
+                        _a.sent();
+                        _a.label = 5;
+                    case 5: return [2 /*return*/];
                 }
             });
         });
@@ -119,19 +168,28 @@ var AuroraDataApiPostgresQueryRunner = /** @class */ (function (_super) {
     /**
      * Executes a given SQL query.
      */
-    AuroraDataApiPostgresQueryRunner.prototype.query = function (query, parameters) {
+    AuroraDataApiPostgresQueryRunner.prototype.query = function (query, parameters, useStructuredResult) {
+        if (useStructuredResult === void 0) { useStructuredResult = false; }
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var result;
+            var raw, result;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.isReleased)
                             throw new QueryRunnerAlreadyReleasedError_1.QueryRunnerAlreadyReleasedError();
-                        return [4 /*yield*/, this.driver.client.query(query, parameters)];
+                        return [4 /*yield*/, this.client.query(query, parameters)];
                     case 1:
-                        result = _a.sent();
-                        if (result.records) {
-                            return [2 /*return*/, result.records];
+                        raw = _a.sent();
+                        result = new QueryResult_1.QueryResult();
+                        result.raw = raw;
+                        if ((raw === null || raw === void 0 ? void 0 : raw.hasOwnProperty('records')) && Array.isArray(raw.records)) {
+                            result.records = raw.records;
+                        }
+                        if (raw === null || raw === void 0 ? void 0 : raw.hasOwnProperty('numberOfRecordsUpdated')) {
+                            result.affected = raw.numberOfRecordsUpdated;
+                        }
+                        if (!useStructuredResult) {
+                            return [2 /*return*/, result.raw];
                         }
                         return [2 /*return*/, result];
                 }

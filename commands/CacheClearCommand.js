@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.CacheClearCommand = void 0;
 var tslib_1 = require("tslib");
-var index_1 = require("../index");
+var globals_1 = require("../globals");
 var ConnectionOptionsReader_1 = require("../connection/ConnectionOptionsReader");
-var chalk = require("chalk");
+var chalk_1 = tslib_1.__importDefault(require("chalk"));
 /**
  * Clear cache command.
  */
@@ -49,17 +50,17 @@ var CacheClearCommand = /** @class */ (function () {
                             dropSchema: false,
                             logging: ["schema"]
                         });
-                        return [4 /*yield*/, index_1.createConnection(connectionOptions)];
+                        return [4 /*yield*/, globals_1.createConnection(connectionOptions)];
                     case 3:
                         connection = _a.sent();
                         if (!connection.queryResultCache) {
-                            console.log(chalk.black.bgRed("Cache is not enabled. To use cache enable it in connection configuration."));
+                            console.log(chalk_1.default.black.bgRed("Cache is not enabled. To use cache enable it in connection configuration."));
                             return [2 /*return*/];
                         }
                         return [4 /*yield*/, connection.queryResultCache.clear()];
                     case 4:
                         _a.sent();
-                        console.log(chalk.green("Cache was successfully cleared"));
+                        console.log(chalk_1.default.green("Cache was successfully cleared"));
                         if (!connection) return [3 /*break*/, 6];
                         return [4 /*yield*/, connection.close()];
                     case 5:
@@ -74,7 +75,7 @@ var CacheClearCommand = /** @class */ (function () {
                         _a.sent();
                         _a.label = 9;
                     case 9:
-                        console.log(chalk.black.bgRed("Error during cache clear:"));
+                        console.log(chalk_1.default.black.bgRed("Error during cache clear:"));
                         console.error(err_1);
                         process.exit(1);
                         return [3 /*break*/, 10];

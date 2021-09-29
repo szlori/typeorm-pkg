@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.DefaultNamingStrategy = void 0;
 var tslib_1 = require("tslib");
 var RandomGenerator_1 = require("../util/RandomGenerator");
 var StringUtils_1 = require("../util/StringUtils");
@@ -12,6 +13,12 @@ var DefaultNamingStrategy = /** @class */ (function () {
         this.nestedSetColumnNames = { left: "nsleft", right: "nsright" };
         this.materializedPathColumnName = "mpath";
     }
+    DefaultNamingStrategy.prototype.getTableName = function (tableOrName) {
+        if (tableOrName instanceof Table_1.Table) {
+            tableOrName = tableOrName.name;
+        }
+        return tableOrName.split(".").pop();
+    };
     /**
      * Normalizes table name.
      *
@@ -40,27 +47,27 @@ var DefaultNamingStrategy = /** @class */ (function () {
     };
     DefaultNamingStrategy.prototype.primaryKeyName = function (tableOrName, columnNames) {
         // sort incoming column names to avoid issue when ["id", "name"] and ["name", "id"] arrays
-        var clonedColumnNames = tslib_1.__spread(columnNames);
+        var clonedColumnNames = tslib_1.__spreadArray([], tslib_1.__read(columnNames));
         clonedColumnNames.sort();
-        var tableName = tableOrName instanceof Table_1.Table ? tableOrName.name : tableOrName;
+        var tableName = this.getTableName(tableOrName);
         var replacedTableName = tableName.replace(".", "_");
         var key = replacedTableName + "_" + clonedColumnNames.join("_");
         return "PK_" + RandomGenerator_1.RandomGenerator.sha1(key).substr(0, 27);
     };
     DefaultNamingStrategy.prototype.uniqueConstraintName = function (tableOrName, columnNames) {
         // sort incoming column names to avoid issue when ["id", "name"] and ["name", "id"] arrays
-        var clonedColumnNames = tslib_1.__spread(columnNames);
+        var clonedColumnNames = tslib_1.__spreadArray([], tslib_1.__read(columnNames));
         clonedColumnNames.sort();
-        var tableName = tableOrName instanceof Table_1.Table ? tableOrName.name : tableOrName;
+        var tableName = this.getTableName(tableOrName);
         var replacedTableName = tableName.replace(".", "_");
         var key = replacedTableName + "_" + clonedColumnNames.join("_");
         return "UQ_" + RandomGenerator_1.RandomGenerator.sha1(key).substr(0, 27);
     };
     DefaultNamingStrategy.prototype.relationConstraintName = function (tableOrName, columnNames, where) {
         // sort incoming column names to avoid issue when ["id", "name"] and ["name", "id"] arrays
-        var clonedColumnNames = tslib_1.__spread(columnNames);
+        var clonedColumnNames = tslib_1.__spreadArray([], tslib_1.__read(columnNames));
         clonedColumnNames.sort();
-        var tableName = tableOrName instanceof Table_1.Table ? tableOrName.name : tableOrName;
+        var tableName = this.getTableName(tableOrName);
         var replacedTableName = tableName.replace(".", "_");
         var key = replacedTableName + "_" + clonedColumnNames.join("_");
         if (where)
@@ -68,39 +75,40 @@ var DefaultNamingStrategy = /** @class */ (function () {
         return "REL_" + RandomGenerator_1.RandomGenerator.sha1(key).substr(0, 26);
     };
     DefaultNamingStrategy.prototype.defaultConstraintName = function (tableOrName, columnName) {
-        var tableName = tableOrName instanceof Table_1.Table ? tableOrName.name : tableOrName;
+        var tableName = this.getTableName(tableOrName);
         var replacedTableName = tableName.replace(".", "_");
         var key = replacedTableName + "_" + columnName;
         return "DF_" + RandomGenerator_1.RandomGenerator.sha1(key).substr(0, 27);
     };
     DefaultNamingStrategy.prototype.foreignKeyName = function (tableOrName, columnNames, _referencedTablePath, _referencedColumnNames) {
         // sort incoming column names to avoid issue when ["id", "name"] and ["name", "id"] arrays
-        var clonedColumnNames = tslib_1.__spread(columnNames);
+        var clonedColumnNames = tslib_1.__spreadArray([], tslib_1.__read(columnNames));
         clonedColumnNames.sort();
-        var tableName = tableOrName instanceof Table_1.Table ? tableOrName.name : tableOrName;
+        var tableName = this.getTableName(tableOrName);
         var replacedTableName = tableName.replace(".", "_");
         var key = replacedTableName + "_" + clonedColumnNames.join("_");
         return "FK_" + RandomGenerator_1.RandomGenerator.sha1(key).substr(0, 27);
     };
     DefaultNamingStrategy.prototype.indexName = function (tableOrName, columnNames, where) {
         // sort incoming column names to avoid issue when ["id", "name"] and ["name", "id"] arrays
-        var clonedColumnNames = tslib_1.__spread(columnNames);
+        var clonedColumnNames = tslib_1.__spreadArray([], tslib_1.__read(columnNames));
         clonedColumnNames.sort();
-        var tableName = tableOrName instanceof Table_1.Table ? tableOrName.name : tableOrName;
+        var tableName = this.getTableName(tableOrName);
         var replacedTableName = tableName.replace(".", "_");
         var key = replacedTableName + "_" + clonedColumnNames.join("_");
         if (where)
             key += "_" + where;
         return "IDX_" + RandomGenerator_1.RandomGenerator.sha1(key).substr(0, 26);
     };
-    DefaultNamingStrategy.prototype.checkConstraintName = function (tableOrName, expression) {
-        var tableName = tableOrName instanceof Table_1.Table ? tableOrName.name : tableOrName;
+    DefaultNamingStrategy.prototype.checkConstraintName = function (tableOrName, expression, isEnum) {
+        var tableName = this.getTableName(tableOrName);
         var replacedTableName = tableName.replace(".", "_");
         var key = replacedTableName + "_" + expression;
-        return "CHK_" + RandomGenerator_1.RandomGenerator.sha1(key).substr(0, 26);
+        var name = "CHK_" + RandomGenerator_1.RandomGenerator.sha1(key).substr(0, 26);
+        return isEnum ? name + "_ENUM" : name;
     };
     DefaultNamingStrategy.prototype.exclusionConstraintName = function (tableOrName, expression) {
-        var tableName = tableOrName instanceof Table_1.Table ? tableOrName.name : tableOrName;
+        var tableName = this.getTableName(tableOrName);
         var replacedTableName = tableName.replace(".", "_");
         var key = replacedTableName + "_" + expression;
         return "XCL_" + RandomGenerator_1.RandomGenerator.sha1(key).substr(0, 26);

@@ -1,8 +1,9 @@
-import * as tslib_1 from "tslib";
+import { __awaiter, __extends, __generator } from "tslib";
 import { QueryRunnerAlreadyReleasedError } from "../../error/QueryRunnerAlreadyReleasedError";
 import { QueryFailedError } from "../../error/QueryFailedError";
 import { AbstractSqliteQueryRunner } from "../sqlite-abstract/AbstractSqliteQueryRunner";
 import { Broadcaster } from "../../subscriber/Broadcaster";
+import { QueryResult } from "../../query-runner/QueryResult";
 /**
  * Runs queries on a single sqlite database connection.
  *
@@ -10,7 +11,7 @@ import { Broadcaster } from "../../subscriber/Broadcaster";
  * todo: need to throw exception for this case.
  */
 var BetterSqlite3QueryRunner = /** @class */ (function (_super) {
-    tslib_1.__extends(BetterSqlite3QueryRunner, _super);
+    __extends(BetterSqlite3QueryRunner, _super);
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
@@ -29,9 +30,9 @@ var BetterSqlite3QueryRunner = /** @class */ (function (_super) {
         return _this;
     }
     BetterSqlite3QueryRunner.prototype.getStmt = function (query) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var stmt, databaseConnection, key, databaseConnection;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!(this.cacheSize > 0)) return [3 /*break*/, 3];
@@ -59,10 +60,11 @@ var BetterSqlite3QueryRunner = /** @class */ (function (_super) {
     /**
      * Executes a given SQL query.
      */
-    BetterSqlite3QueryRunner.prototype.query = function (query, parameters) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var connection, i, queryStartTime, stmt, result, maxQueryExecutionTime, queryEndTime, queryExecutionTime;
-            return tslib_1.__generator(this, function (_a) {
+    BetterSqlite3QueryRunner.prototype.query = function (query, parameters, useStructuredResult) {
+        if (useStructuredResult === void 0) { useStructuredResult = false; }
+        return __awaiter(this, void 0, void 0, function () {
+            var connection, i, queryStartTime, stmt, result, raw, raw, maxQueryExecutionTime, queryEndTime, queryExecutionTime;
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.isReleased)
@@ -80,21 +82,27 @@ var BetterSqlite3QueryRunner = /** @class */ (function (_super) {
                     case 1:
                         stmt = _a.sent();
                         try {
-                            result = void 0;
+                            result = new QueryResult();
                             if (stmt.reader) {
-                                result = stmt.all.apply(stmt, parameters);
-                            }
-                            else {
-                                result = stmt.run.apply(stmt, parameters);
-                                if (query.substr(0, 6) === "INSERT") {
-                                    result = result.lastInsertRowid;
+                                raw = stmt.all.apply(stmt, parameters);
+                                result.raw = raw;
+                                if (Array.isArray(raw)) {
+                                    result.records = raw;
                                 }
                             }
-                            maxQueryExecutionTime = connection.options.maxQueryExecutionTime;
+                            else {
+                                raw = stmt.run.apply(stmt, parameters);
+                                result.affected = raw.changes;
+                                result.raw = raw.lastInsertRowid;
+                            }
+                            maxQueryExecutionTime = this.driver.options.maxQueryExecutionTime;
                             queryEndTime = +new Date();
                             queryExecutionTime = queryEndTime - queryStartTime;
                             if (maxQueryExecutionTime && queryExecutionTime > maxQueryExecutionTime)
                                 connection.logger.logQuerySlow(queryExecutionTime, query, parameters, this);
+                            if (!useStructuredResult) {
+                                return [2 /*return*/, result.raw];
+                            }
                             return [2 /*return*/, result];
                         }
                         catch (err) {

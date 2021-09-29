@@ -1,5 +1,5 @@
 import { CustomRepositoryDoesNotHaveEntityError } from "../error/CustomRepositoryDoesNotHaveEntityError";
-import { getMetadataArgsStorage } from "../index";
+import { getMetadataArgsStorage } from "../globals";
 import { CustomRepositoryNotFoundError } from "../error/CustomRepositoryNotFoundError";
 /**
  * Provides abstract class for custom repositories that do not inherit from original orm Repository.
@@ -25,7 +25,7 @@ var AbstractRepository = /** @class */ (function () {
                 throw new CustomRepositoryDoesNotHaveEntityError(this.constructor);
             return this.manager.getRepository(target);
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     Object.defineProperty(AbstractRepository.prototype, "treeRepository", {
@@ -39,7 +39,7 @@ var AbstractRepository = /** @class */ (function () {
                 throw new CustomRepositoryDoesNotHaveEntityError(this.constructor);
             return this.manager.getTreeRepository(target);
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     // -------------------------------------------------------------------------

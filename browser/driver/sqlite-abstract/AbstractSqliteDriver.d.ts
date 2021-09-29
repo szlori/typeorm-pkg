@@ -10,6 +10,10 @@ import { DataTypeDefaults } from "../types/DataTypeDefaults";
 import { TableColumn } from "../../schema-builder/table/TableColumn";
 import { BaseConnectionOptions } from "../../connection/BaseConnectionOptions";
 import { EntityMetadata } from "../../metadata/EntityMetadata";
+import { ReplicationMode } from "../types/ReplicationMode";
+import { Table } from "../../schema-builder/table/Table";
+import { View } from "../../schema-builder/view/View";
+import { TableForeignKey } from "../../schema-builder/table/TableForeignKey";
 /**
  * Organizes communication with sqlite DBMS.
  */
@@ -88,7 +92,7 @@ export declare abstract class AbstractSqliteDriver implements Driver {
     /**
      * Creates a query runner used to execute database queries.
      */
-    abstract createQueryRunner(mode: "master" | "slave"): QueryRunner;
+    abstract createQueryRunner(mode: ReplicationMode): QueryRunner;
     /**
      * Performs connection to the database.
      */
@@ -124,11 +128,19 @@ export declare abstract class AbstractSqliteDriver implements Driver {
     escape(columnName: string): string;
     /**
      * Build full table name with database name, schema name and table name.
-     * E.g. "myDB"."mySchema"."myTable"
+     * E.g. myDB.mySchema.myTable
      *
      * Returns only simple table name because all inherited drivers does not supports schema and database.
      */
     buildTableName(tableName: string, schema?: string, database?: string): string;
+    /**
+     * Parse a target table name or other types and return a normalized table definition.
+     */
+    parseTableName(target: EntityMetadata | Table | View | TableForeignKey | string): {
+        database?: string;
+        schema?: string;
+        tableName: string;
+    };
     /**
      * Creates a database type from a given column metadata.
      */
@@ -141,7 +153,7 @@ export declare abstract class AbstractSqliteDriver implements Driver {
     /**
      * Normalizes "default" value of the column.
      */
-    normalizeDefault(columnMetadata: ColumnMetadata): string;
+    normalizeDefault(columnMetadata: ColumnMetadata): string | undefined;
     /**
      * Normalizes "isUnique" value of the column.
      */
@@ -169,7 +181,7 @@ export declare abstract class AbstractSqliteDriver implements Driver {
     /**
      * Creates generated map of values generated or returned by database after INSERT query.
      */
-    createGeneratedMap(metadata: EntityMetadata, insertResult: any): any;
+    createGeneratedMap(metadata: EntityMetadata, insertResult: any, entityIndex: number, entityNum: number): any;
     /**
      * Differentiate columns of this table and columns from the given column metadatas columns
      * and returns only changed.
@@ -183,6 +195,10 @@ export declare abstract class AbstractSqliteDriver implements Driver {
      * Returns true if driver supports uuid values generation on its own.
      */
     isUUIDGenerationSupported(): boolean;
+    /**
+     * Returns true if driver supports fulltext indices.
+     */
+    isFullTextColumnTypeSupported(): boolean;
     /**
      * Creates an escaped parameter.
      */

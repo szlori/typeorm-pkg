@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.AuroraDataApiQueryRunner = void 0;
 var tslib_1 = require("tslib");
+var QueryResult_1 = require("../../query-runner/QueryResult");
 var TransactionAlreadyStartedError_1 = require("../../error/TransactionAlreadyStartedError");
 var TransactionNotStartedError_1 = require("../../error/TransactionNotStartedError");
 var TableColumn_1 = require("../../schema-builder/table/TableColumn");
@@ -14,7 +16,8 @@ var OrmUtils_1 = require("../../util/OrmUtils");
 var TableUnique_1 = require("../../schema-builder/table/TableUnique");
 var BaseQueryRunner_1 = require("../../query-runner/BaseQueryRunner");
 var Broadcaster_1 = require("../../subscriber/Broadcaster");
-var index_1 = require("../../index");
+var BroadcasterResult_1 = require("../../subscriber/BroadcasterResult");
+var error_1 = require("../../error");
 /**
  * Runs queries on a single mysql database connection.
  */
@@ -23,10 +26,11 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
-    function AuroraDataApiQueryRunner(driver) {
+    function AuroraDataApiQueryRunner(driver, client) {
         var _this = _super.call(this) || this;
         _this.driver = driver;
         _this.connection = driver.connection;
+        _this.client = client;
         _this.broadcaster = new Broadcaster_1.Broadcaster(_this);
         return _this;
     }
@@ -59,16 +63,32 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiQueryRunner.prototype.startTransaction = function (isolationLevel) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var beforeBroadcastResult, afterBroadcastResult;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.isTransactionActive)
                             throw new TransactionAlreadyStartedError_1.TransactionAlreadyStartedError();
-                        this.isTransactionActive = true;
-                        return [4 /*yield*/, this.driver.client.startTransaction()];
+                        beforeBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastBeforeTransactionStartEvent(beforeBroadcastResult);
+                        if (!(beforeBroadcastResult.promises.length > 0)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, Promise.all(beforeBroadcastResult.promises)];
                     case 1:
                         _a.sent();
-                        return [2 /*return*/];
+                        _a.label = 2;
+                    case 2:
+                        this.isTransactionActive = true;
+                        return [4 /*yield*/, this.client.startTransaction()];
+                    case 3:
+                        _a.sent();
+                        afterBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastAfterTransactionStartEvent(afterBroadcastResult);
+                        if (!(afterBroadcastResult.promises.length > 0)) return [3 /*break*/, 5];
+                        return [4 /*yield*/, Promise.all(afterBroadcastResult.promises)];
+                    case 4:
+                        _a.sent();
+                        _a.label = 5;
+                    case 5: return [2 /*return*/];
                 }
             });
         });
@@ -79,16 +99,31 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiQueryRunner.prototype.commitTransaction = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var beforeBroadcastResult, afterBroadcastResult;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isTransactionActive)
                             throw new TransactionNotStartedError_1.TransactionNotStartedError();
-                        return [4 /*yield*/, this.driver.client.commitTransaction()];
+                        beforeBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastBeforeTransactionCommitEvent(beforeBroadcastResult);
+                        if (!(beforeBroadcastResult.promises.length > 0)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, Promise.all(beforeBroadcastResult.promises)];
                     case 1:
                         _a.sent();
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, this.client.commitTransaction()];
+                    case 3:
+                        _a.sent();
                         this.isTransactionActive = false;
-                        return [2 /*return*/];
+                        afterBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastAfterTransactionCommitEvent(afterBroadcastResult);
+                        if (!(afterBroadcastResult.promises.length > 0)) return [3 /*break*/, 5];
+                        return [4 /*yield*/, Promise.all(afterBroadcastResult.promises)];
+                    case 4:
+                        _a.sent();
+                        _a.label = 5;
+                    case 5: return [2 /*return*/];
                 }
             });
         });
@@ -99,16 +134,31 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiQueryRunner.prototype.rollbackTransaction = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var beforeBroadcastResult, afterBroadcastResult;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (!this.isTransactionActive)
                             throw new TransactionNotStartedError_1.TransactionNotStartedError();
-                        return [4 /*yield*/, this.driver.client.rollbackTransaction()];
+                        beforeBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastBeforeTransactionRollbackEvent(beforeBroadcastResult);
+                        if (!(beforeBroadcastResult.promises.length > 0)) return [3 /*break*/, 2];
+                        return [4 /*yield*/, Promise.all(beforeBroadcastResult.promises)];
                     case 1:
                         _a.sent();
+                        _a.label = 2;
+                    case 2: return [4 /*yield*/, this.client.rollbackTransaction()];
+                    case 3:
+                        _a.sent();
                         this.isTransactionActive = false;
-                        return [2 /*return*/];
+                        afterBroadcastResult = new BroadcasterResult_1.BroadcasterResult();
+                        this.broadcaster.broadcastAfterTransactionRollbackEvent(afterBroadcastResult);
+                        if (!(afterBroadcastResult.promises.length > 0)) return [3 /*break*/, 5];
+                        return [4 /*yield*/, Promise.all(afterBroadcastResult.promises)];
+                    case 4:
+                        _a.sent();
+                        _a.label = 5;
+                    case 5: return [2 /*return*/];
                 }
             });
         });
@@ -116,19 +166,28 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     /**
      * Executes a raw SQL query.
      */
-    AuroraDataApiQueryRunner.prototype.query = function (query, parameters) {
+    AuroraDataApiQueryRunner.prototype.query = function (query, parameters, useStructuredResult) {
+        if (useStructuredResult === void 0) { useStructuredResult = false; }
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var result;
+            var raw, result;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.isReleased)
                             throw new QueryRunnerAlreadyReleasedError_1.QueryRunnerAlreadyReleasedError();
-                        return [4 /*yield*/, this.driver.client.query(query, parameters)];
+                        return [4 /*yield*/, this.client.query(query, parameters)];
                     case 1:
-                        result = _a.sent();
-                        if (result.records) {
-                            return [2 /*return*/, result.records];
+                        raw = _a.sent();
+                        result = new QueryResult_1.QueryResult();
+                        result.raw = raw;
+                        if ((raw === null || raw === void 0 ? void 0 : raw.hasOwnProperty('records')) && Array.isArray(raw.records)) {
+                            result.records = raw.records;
+                        }
+                        if (raw === null || raw === void 0 ? void 0 : raw.hasOwnProperty('numberOfRecordsUpdated')) {
+                            result.affected = raw.numberOfRecordsUpdated;
+                        }
+                        if (!useStructuredResult) {
+                            return [2 /*return*/, result.raw];
                         }
                         return [2 /*return*/, result];
                 }
@@ -184,7 +243,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.getSchemas = function (database) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql driver does not support table schemas");
+                throw new error_1.TypeORMError("MySql driver does not support table schemas");
             });
         });
     };
@@ -205,12 +264,44 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
         });
     };
     /**
+     * Loads currently using database
+     */
+    AuroraDataApiQueryRunner.prototype.getCurrentDatabase = function () {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var query;
+            return tslib_1.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.query("SELECT DATABASE() AS `db_name`")];
+                    case 1:
+                        query = _a.sent();
+                        return [2 /*return*/, query[0]["db_name"]];
+                }
+            });
+        });
+    };
+    /**
      * Checks if schema with the given name exist.
      */
     AuroraDataApiQueryRunner.prototype.hasSchema = function (schema) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql driver does not support table schemas");
+                throw new error_1.TypeORMError("MySql driver does not support table schemas");
+            });
+        });
+    };
+    /**
+     * Loads currently using database schema
+     */
+    AuroraDataApiQueryRunner.prototype.getCurrentSchema = function () {
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var query;
+            return tslib_1.__generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.query("SELECT SCHEMA() AS `schema_name`")];
+                    case 1:
+                        query = _a.sent();
+                        return [2 /*return*/, query[0]["schema_name"]];
+                }
             });
         });
     };
@@ -223,7 +314,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        parsedTableName = this.parseTableName(tableOrName);
+                        parsedTableName = this.driver.parseTableName(tableOrName);
                         sql = "SELECT * FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '" + parsedTableName.database + "' AND `TABLE_NAME` = '" + parsedTableName.tableName + "'";
                         return [4 /*yield*/, this.query(sql)];
                     case 1:
@@ -242,7 +333,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        parsedTableName = this.parseTableName(tableOrName);
+                        parsedTableName = this.driver.parseTableName(tableOrName);
                         columnName = column instanceof TableColumn_1.TableColumn ? column.name : column;
                         sql = "SELECT * FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE `TABLE_SCHEMA` = '" + parsedTableName.database + "' AND `TABLE_NAME` = '" + parsedTableName.tableName + "' AND `COLUMN_NAME` = '" + columnName + "'";
                         return [4 /*yield*/, this.query(sql)];
@@ -294,10 +385,10 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     /**
      * Creates a new table schema.
      */
-    AuroraDataApiQueryRunner.prototype.createSchema = function (schema, ifNotExist) {
+    AuroraDataApiQueryRunner.prototype.createSchema = function (schemaPath, ifNotExist) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("Schema create queries are not supported by MySql driver.");
+                throw new error_1.TypeORMError("Schema create queries are not supported by MySql driver.");
             });
         });
     };
@@ -307,7 +398,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.dropSchema = function (schemaPath, ifExist) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("Schema drop queries are not supported by MySql driver.");
+                throw new error_1.TypeORMError("Schema drop queries are not supported by MySql driver.");
             });
         });
     };
@@ -355,7 +446,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.dropTable = function (target, ifExist, dropForeignKeys) {
         if (dropForeignKeys === void 0) { dropForeignKeys = true; }
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var isTableExist, createForeignKeys, tableName, table, upQueries, downQueries;
+            var isTableExist, createForeignKeys, tablePath, table, upQueries, downQueries;
             var _this = this;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
@@ -369,8 +460,8 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         _a.label = 2;
                     case 2:
                         createForeignKeys = dropForeignKeys;
-                        tableName = target instanceof Table_1.Table ? target.name : target;
-                        return [4 /*yield*/, this.getCachedTable(tableName)];
+                        tablePath = this.getTablePath(target);
+                        return [4 /*yield*/, this.getCachedTable(tablePath)];
                     case 3:
                         table = _a.sent();
                         upQueries = [];
@@ -455,7 +546,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiQueryRunner.prototype.renameTable = function (oldTableOrName, newTableName) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var upQueries, downQueries, oldTable, _a, newTable, dbName;
+            var upQueries, downQueries, oldTable, _a, newTable, database;
             var _this = this;
             return tslib_1.__generator(this, function (_b) {
                 switch (_b.label) {
@@ -472,11 +563,11 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                     case 3:
                         oldTable = _a;
                         newTable = oldTable.clone();
-                        dbName = oldTable.name.indexOf(".") === -1 ? undefined : oldTable.name.split(".")[0];
-                        newTable.name = dbName ? dbName + "." + newTableName : newTableName;
+                        database = this.driver.parseTableName(oldTable).database;
+                        newTable.name = database ? database + "." + newTableName : newTableName;
                         // rename table
-                        upQueries.push(new Query_1.Query("RENAME TABLE " + this.escapePath(oldTable.name) + " TO " + this.escapePath(newTable.name)));
-                        downQueries.push(new Query_1.Query("RENAME TABLE " + this.escapePath(newTable.name) + " TO " + this.escapePath(oldTable.name)));
+                        upQueries.push(new Query_1.Query("RENAME TABLE " + this.escapePath(oldTable) + " TO " + this.escapePath(newTable)));
+                        downQueries.push(new Query_1.Query("RENAME TABLE " + this.escapePath(newTable) + " TO " + this.escapePath(oldTable)));
                         // rename index constraints
                         newTable.indices.forEach(function (index) {
                             // build new constraint name
@@ -503,13 +594,13 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                             var newForeignKeyName = _this.connection.namingStrategy.foreignKeyName(newTable, foreignKey.columnNames);
                             // build queries
                             var up = "ALTER TABLE " + _this.escapePath(newTable) + " DROP FOREIGN KEY `" + foreignKey.name + "`, ADD CONSTRAINT `" + newForeignKeyName + "` FOREIGN KEY (" + columnNames + ") " +
-                                ("REFERENCES " + _this.escapePath(foreignKey.referencedTableName) + "(" + referencedColumnNames + ")");
+                                ("REFERENCES " + _this.escapePath(_this.getTablePath(foreignKey)) + "(" + referencedColumnNames + ")");
                             if (foreignKey.onDelete)
                                 up += " ON DELETE " + foreignKey.onDelete;
                             if (foreignKey.onUpdate)
                                 up += " ON UPDATE " + foreignKey.onUpdate;
                             var down = "ALTER TABLE " + _this.escapePath(newTable) + " DROP FOREIGN KEY `" + newForeignKeyName + "`, ADD CONSTRAINT `" + foreignKey.name + "` FOREIGN KEY (" + columnNames + ") " +
-                                ("REFERENCES " + _this.escapePath(foreignKey.referencedTableName) + "(" + referencedColumnNames + ")");
+                                ("REFERENCES " + _this.escapePath(_this.getTablePath(foreignKey)) + "(" + referencedColumnNames + ")");
                             if (foreignKey.onDelete)
                                 down += " ON DELETE " + foreignKey.onDelete;
                             if (foreignKey.onUpdate)
@@ -588,7 +679,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         }
                         else if (column.isUnique) {
                             uniqueIndex = new TableIndex_1.TableIndex({
-                                name: this.connection.namingStrategy.indexName(table.name, [column.name]),
+                                name: this.connection.namingStrategy.indexName(table, [column.name]),
                                 columnNames: [column.name],
                                 isUnique: true
                             });
@@ -615,13 +706,36 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiQueryRunner.prototype.addColumns = function (tableOrName, columns) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var _this = this;
-            return tslib_1.__generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, index_1.PromiseUtils.runInSequence(columns, function (column) { return _this.addColumn(tableOrName, column); })];
+            var columns_1, columns_1_1, column, e_1_1;
+            var e_1, _a;
+            return tslib_1.__generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _b.trys.push([0, 5, 6, 7]);
+                        columns_1 = tslib_1.__values(columns), columns_1_1 = columns_1.next();
+                        _b.label = 1;
                     case 1:
-                        _a.sent();
-                        return [2 /*return*/];
+                        if (!!columns_1_1.done) return [3 /*break*/, 4];
+                        column = columns_1_1.value;
+                        return [4 /*yield*/, this.addColumn(tableOrName, column)];
+                    case 2:
+                        _b.sent();
+                        _b.label = 3;
+                    case 3:
+                        columns_1_1 = columns_1.next();
+                        return [3 /*break*/, 1];
+                    case 4: return [3 /*break*/, 7];
+                    case 5:
+                        e_1_1 = _b.sent();
+                        e_1 = { error: e_1_1 };
+                        return [3 /*break*/, 7];
+                    case 6:
+                        try {
+                            if (columns_1_1 && !columns_1_1.done && (_a = columns_1.return)) _a.call(columns_1);
+                        }
+                        finally { if (e_1) throw e_1.error; }
+                        return [7 /*endfinally*/];
+                    case 7: return [2 /*return*/];
                 }
             });
         });
@@ -646,7 +760,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         oldColumn = oldTableColumnOrName instanceof TableColumn_1.TableColumn ? oldTableColumnOrName : table.columns.find(function (c) { return c.name === oldTableColumnOrName; });
                         if (!oldColumn)
-                            throw new Error("Column \"" + oldTableColumnOrName + "\" was not found in the \"" + table.name + "\" table.");
+                            throw new error_1.TypeORMError("Column \"" + oldTableColumnOrName + "\" was not found in the \"" + table.name + "\" table.");
                         newColumn = undefined;
                         if (newTableColumnOrName instanceof TableColumn_1.TableColumn) {
                             newColumn = newTableColumnOrName;
@@ -689,7 +803,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                             ? oldColumnOrName
                             : table.columns.find(function (column) { return column.name === oldColumnOrName; });
                         if (!oldColumn)
-                            throw new Error("Column \"" + oldColumnOrName + "\" was not found in the \"" + table.name + "\" table.");
+                            throw new error_1.TypeORMError("Column \"" + oldColumnOrName + "\" was not found in the \"" + table.name + "\" table.");
                         if (!((newColumn.isGenerated !== oldColumn.isGenerated && newColumn.generationStrategy !== "uuid")
                             || oldColumn.type !== newColumn.type
                             || oldColumn.length !== newColumn.length
@@ -738,13 +852,13 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                                 var newForeignKeyName = _this.connection.namingStrategy.foreignKeyName(clonedTable, foreignKey.columnNames);
                                 // build queries
                                 var up = "ALTER TABLE " + _this.escapePath(table) + " DROP FOREIGN KEY `" + foreignKey.name + "`, ADD CONSTRAINT `" + newForeignKeyName + "` FOREIGN KEY (" + columnNames + ") " +
-                                    ("REFERENCES " + _this.escapePath(foreignKey.referencedTableName) + "(" + referencedColumnNames + ")");
+                                    ("REFERENCES " + _this.escapePath(_this.getTablePath(foreignKey)) + "(" + referencedColumnNames + ")");
                                 if (foreignKey.onDelete)
                                     up += " ON DELETE " + foreignKey.onDelete;
                                 if (foreignKey.onUpdate)
                                     up += " ON UPDATE " + foreignKey.onUpdate;
                                 var down = "ALTER TABLE " + _this.escapePath(table) + " DROP FOREIGN KEY `" + newForeignKeyName + "`, ADD CONSTRAINT `" + foreignKey.name + "` FOREIGN KEY (" + columnNames + ") " +
-                                    ("REFERENCES " + _this.escapePath(foreignKey.referencedTableName) + "(" + referencedColumnNames + ")");
+                                    ("REFERENCES " + _this.escapePath(_this.getTablePath(foreignKey)) + "(" + referencedColumnNames + ")");
                                 if (foreignKey.onDelete)
                                     down += " ON DELETE " + foreignKey.onDelete;
                                 if (foreignKey.onUpdate)
@@ -810,7 +924,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         if (newColumn.isUnique !== oldColumn.isUnique) {
                             if (newColumn.isUnique === true) {
                                 uniqueIndex = new TableIndex_1.TableIndex({
-                                    name: this.connection.namingStrategy.indexName(table.name, [newColumn.name]),
+                                    name: this.connection.namingStrategy.indexName(table, [newColumn.name]),
                                     columnNames: [newColumn.name],
                                     isUnique: true
                                 });
@@ -848,13 +962,36 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiQueryRunner.prototype.changeColumns = function (tableOrName, changedColumns) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var _this = this;
-            return tslib_1.__generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, index_1.PromiseUtils.runInSequence(changedColumns, function (changedColumn) { return _this.changeColumn(tableOrName, changedColumn.oldColumn, changedColumn.newColumn); })];
+            var changedColumns_1, changedColumns_1_1, _a, oldColumn, newColumn, e_2_1;
+            var e_2, _b;
+            return tslib_1.__generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        _c.trys.push([0, 5, 6, 7]);
+                        changedColumns_1 = tslib_1.__values(changedColumns), changedColumns_1_1 = changedColumns_1.next();
+                        _c.label = 1;
                     case 1:
-                        _a.sent();
-                        return [2 /*return*/];
+                        if (!!changedColumns_1_1.done) return [3 /*break*/, 4];
+                        _a = changedColumns_1_1.value, oldColumn = _a.oldColumn, newColumn = _a.newColumn;
+                        return [4 /*yield*/, this.changeColumn(tableOrName, oldColumn, newColumn)];
+                    case 2:
+                        _c.sent();
+                        _c.label = 3;
+                    case 3:
+                        changedColumns_1_1 = changedColumns_1.next();
+                        return [3 /*break*/, 1];
+                    case 4: return [3 /*break*/, 7];
+                    case 5:
+                        e_2_1 = _c.sent();
+                        e_2 = { error: e_2_1 };
+                        return [3 /*break*/, 7];
+                    case 6:
+                        try {
+                            if (changedColumns_1_1 && !changedColumns_1_1.done && (_b = changedColumns_1.return)) _b.call(changedColumns_1);
+                        }
+                        finally { if (e_2) throw e_2.error; }
+                        return [7 /*endfinally*/];
+                    case 7: return [2 /*return*/];
                 }
             });
         });
@@ -879,7 +1016,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         column = columnOrName instanceof TableColumn_1.TableColumn ? columnOrName : table.findColumnByName(columnOrName);
                         if (!column)
-                            throw new Error("Column \"" + columnOrName + "\" was not found in table \"" + table.name + "\"");
+                            throw new error_1.TypeORMError("Column \"" + columnOrName + "\" was not found in table \"" + table.name + "\"");
                         clonedTable = table.clone();
                         upQueries = [];
                         downQueries = [];
@@ -920,11 +1057,11 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                             downQueries.push(this.createIndexSql(table, columnIndex));
                         }
                         else if (column.isUnique) {
-                            uniqueName_1 = this.connection.namingStrategy.uniqueConstraintName(table.name, [column.name]);
+                            uniqueName_1 = this.connection.namingStrategy.uniqueConstraintName(table, [column.name]);
                             foundUnique = clonedTable.uniques.find(function (unique) { return unique.name === uniqueName_1; });
                             if (foundUnique)
                                 clonedTable.uniques.splice(clonedTable.uniques.indexOf(foundUnique), 1);
-                            indexName_1 = this.connection.namingStrategy.indexName(table.name, [column.name]);
+                            indexName_1 = this.connection.namingStrategy.indexName(table, [column.name]);
                             foundIndex = clonedTable.indices.find(function (index) { return index.name === indexName_1; });
                             if (foundIndex)
                                 clonedTable.indices.splice(clonedTable.indices.indexOf(foundIndex), 1);
@@ -948,13 +1085,36 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiQueryRunner.prototype.dropColumns = function (tableOrName, columns) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var _this = this;
-            return tslib_1.__generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, index_1.PromiseUtils.runInSequence(columns, function (column) { return _this.dropColumn(tableOrName, column); })];
+            var columns_2, columns_2_1, column, e_3_1;
+            var e_3, _a;
+            return tslib_1.__generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _b.trys.push([0, 5, 6, 7]);
+                        columns_2 = tslib_1.__values(columns), columns_2_1 = columns_2.next();
+                        _b.label = 1;
                     case 1:
-                        _a.sent();
-                        return [2 /*return*/];
+                        if (!!columns_2_1.done) return [3 /*break*/, 4];
+                        column = columns_2_1.value;
+                        return [4 /*yield*/, this.dropColumn(tableOrName, column)];
+                    case 2:
+                        _b.sent();
+                        _b.label = 3;
+                    case 3:
+                        columns_2_1 = columns_2.next();
+                        return [3 /*break*/, 1];
+                    case 4: return [3 /*break*/, 7];
+                    case 5:
+                        e_3_1 = _b.sent();
+                        e_3 = { error: e_3_1 };
+                        return [3 /*break*/, 7];
+                    case 6:
+                        try {
+                            if (columns_2_1 && !columns_2_1.done && (_a = columns_2.return)) _a.call(columns_2);
+                        }
+                        finally { if (e_3) throw e_3.error; }
+                        return [7 /*endfinally*/];
+                    case 7: return [2 /*return*/];
                 }
             });
         });
@@ -1093,7 +1253,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.createUniqueConstraint = function (tableOrName, uniqueConstraint) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support unique constraints. Use unique index instead.");
+                throw new error_1.TypeORMError("MySql does not support unique constraints. Use unique index instead.");
             });
         });
     };
@@ -1103,7 +1263,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.createUniqueConstraints = function (tableOrName, uniqueConstraints) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support unique constraints. Use unique index instead.");
+                throw new error_1.TypeORMError("MySql does not support unique constraints. Use unique index instead.");
             });
         });
     };
@@ -1113,7 +1273,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.dropUniqueConstraint = function (tableOrName, uniqueOrName) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support unique constraints. Use unique index instead.");
+                throw new error_1.TypeORMError("MySql does not support unique constraints. Use unique index instead.");
             });
         });
     };
@@ -1123,7 +1283,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.dropUniqueConstraints = function (tableOrName, uniqueConstraints) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support unique constraints. Use unique index instead.");
+                throw new error_1.TypeORMError("MySql does not support unique constraints. Use unique index instead.");
             });
         });
     };
@@ -1133,7 +1293,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.createCheckConstraint = function (tableOrName, checkConstraint) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support check constraints.");
+                throw new error_1.TypeORMError("MySql does not support check constraints.");
             });
         });
     };
@@ -1143,7 +1303,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.createCheckConstraints = function (tableOrName, checkConstraints) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support check constraints.");
+                throw new error_1.TypeORMError("MySql does not support check constraints.");
             });
         });
     };
@@ -1153,7 +1313,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.dropCheckConstraint = function (tableOrName, checkOrName) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support check constraints.");
+                throw new error_1.TypeORMError("MySql does not support check constraints.");
             });
         });
     };
@@ -1163,7 +1323,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.dropCheckConstraints = function (tableOrName, checkConstraints) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support check constraints.");
+                throw new error_1.TypeORMError("MySql does not support check constraints.");
             });
         });
     };
@@ -1173,7 +1333,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.createExclusionConstraint = function (tableOrName, exclusionConstraint) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support exclusion constraints.");
+                throw new error_1.TypeORMError("MySql does not support exclusion constraints.");
             });
         });
     };
@@ -1183,7 +1343,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.createExclusionConstraints = function (tableOrName, exclusionConstraints) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support exclusion constraints.");
+                throw new error_1.TypeORMError("MySql does not support exclusion constraints.");
             });
         });
     };
@@ -1193,7 +1353,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.dropExclusionConstraint = function (tableOrName, exclusionOrName) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support exclusion constraints.");
+                throw new error_1.TypeORMError("MySql does not support exclusion constraints.");
             });
         });
     };
@@ -1203,7 +1363,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     AuroraDataApiQueryRunner.prototype.dropExclusionConstraints = function (tableOrName, exclusionConstraints) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
-                throw new Error("MySql does not support exclusion constraints.");
+                throw new error_1.TypeORMError("MySql does not support exclusion constraints.");
             });
         });
     };
@@ -1227,7 +1387,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         // new FK may be passed without name. In this case we generate FK name manually.
                         if (!foreignKey.name)
-                            foreignKey.name = this.connection.namingStrategy.foreignKeyName(table.name, foreignKey.columnNames);
+                            foreignKey.name = this.connection.namingStrategy.foreignKeyName(table, foreignKey.columnNames);
                         up = this.createForeignKeySql(table, foreignKey);
                         down = this.dropForeignKeySql(table, foreignKey);
                         return [4 /*yield*/, this.executeQueries(up, down)];
@@ -1278,7 +1438,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         foreignKey = foreignKeyOrName instanceof TableForeignKey_1.TableForeignKey ? foreignKeyOrName : table.foreignKeys.find(function (fk) { return fk.name === foreignKeyOrName; });
                         if (!foreignKey)
-                            throw new Error("Supplied foreign key was not found in table " + table.name);
+                            throw new error_1.TypeORMError("Supplied foreign key was not found in table " + table.name);
                         up = this.dropForeignKeySql(table, foreignKey);
                         down = this.createForeignKeySql(table, foreignKey);
                         return [4 /*yield*/, this.executeQueries(up, down)];
@@ -1329,7 +1489,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         // new index may be passed without name. In this case we generate index name manually.
                         if (!index.name)
-                            index.name = this.connection.namingStrategy.indexName(table.name, index.columnNames, index.where);
+                            index.name = this.connection.namingStrategy.indexName(table, index.columnNames, index.where);
                         up = this.createIndexSql(table, index);
                         down = this.dropIndexSql(table, index);
                         return [4 /*yield*/, this.executeQueries(up, down)];
@@ -1380,7 +1540,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         table = _a;
                         index = indexOrName instanceof TableIndex_1.TableIndex ? indexOrName : table.indices.find(function (i) { return i.name === indexOrName; });
                         if (!index)
-                            throw new Error("Supplied index was not found in table " + table.name);
+                            throw new error_1.TypeORMError("Supplied index was not found in table " + table.name);
                         up = this.dropIndexSql(table, index);
                         down = this.createIndexSql(table, index);
                         return [4 /*yield*/, this.executeQueries(up, down)];
@@ -1434,7 +1594,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiQueryRunner.prototype.clearDatabase = function (database) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var dbName, isDatabaseExist, selectViewDropsQuery, dropViewQueries, disableForeignKeysCheckQuery, dropTablesQuery, enableForeignKeysCheckQuery, dropQueries, error_1, rollbackError_1;
+            var dbName, isDatabaseExist, selectViewDropsQuery, dropViewQueries, disableForeignKeysCheckQuery, dropTablesQuery, enableForeignKeysCheckQuery, dropQueries, error_2, rollbackError_1;
             var _this = this;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
@@ -1447,7 +1607,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         if (!isDatabaseExist)
                             return [2 /*return*/, Promise.resolve()];
                         return [3 /*break*/, 3];
-                    case 2: throw new Error("Can not clear database. No database is specified");
+                    case 2: throw new error_1.TypeORMError("Can not clear database. No database is specified");
                     case 3: return [4 /*yield*/, this.startTransaction()];
                     case 4:
                         _a.sent();
@@ -1481,7 +1641,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         _a.sent();
                         return [3 /*break*/, 18];
                     case 13:
-                        error_1 = _a.sent();
+                        error_2 = _a.sent();
                         _a.label = 14;
                     case 14:
                         _a.trys.push([14, 16, , 17]);
@@ -1492,7 +1652,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                     case 16:
                         rollbackError_1 = _a.sent();
                         return [3 /*break*/, 17];
-                    case 17: throw error_1;
+                    case 17: throw error_2;
                     case 18: return [2 /*return*/];
                 }
             });
@@ -1501,22 +1661,6 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
     // -------------------------------------------------------------------------
     // Protected Methods
     // -------------------------------------------------------------------------
-    /**
-     * Returns current database.
-     */
-    AuroraDataApiQueryRunner.prototype.getCurrentDatabase = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var currentDBQuery;
-            return tslib_1.__generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.query("SELECT DATABASE() AS `db_name`")];
-                    case 1:
-                        currentDBQuery = _a.sent();
-                        return [2 /*return*/, currentDBQuery[0]["db_name"]];
-                }
-            });
-        });
-    };
     AuroraDataApiQueryRunner.prototype.loadViews = function (viewNames) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             var hasTable, currentDatabase, viewsCondition, query, dbViews;
@@ -1526,16 +1670,19 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                     case 0: return [4 /*yield*/, this.hasTable(this.getTypeormMetadataTableName())];
                     case 1:
                         hasTable = _a.sent();
-                        if (!hasTable)
-                            return [2 /*return*/, Promise.resolve([])];
+                        if (!hasTable) {
+                            return [2 /*return*/, []];
+                        }
+                        if (!viewNames) {
+                            viewNames = [];
+                        }
                         return [4 /*yield*/, this.getCurrentDatabase()];
                     case 2:
                         currentDatabase = _a.sent();
                         viewsCondition = viewNames.map(function (tableName) {
-                            var _a = tslib_1.__read(tableName.split("."), 2), database = _a[0], name = _a[1];
-                            if (!name) {
-                                name = database;
-                                database = _this.driver.database || currentDatabase;
+                            var _a = _this.driver.parseTableName(tableName), database = _a.database, name = _a.tableName;
+                            if (!database) {
+                                database = currentDatabase;
                             }
                             return "(`t`.`schema` = '" + database + "' AND `t`.`name` = '" + name + "')";
                         }).join(" OR ");
@@ -1547,6 +1694,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                         return [2 /*return*/, dbViews.map(function (dbView) {
                                 var view = new View_1.View();
                                 var db = dbView["schema"] === currentDatabase ? undefined : dbView["schema"];
+                                view.database = dbView["schema"];
                                 view.name = _this.driver.buildTableName(dbView["name"], undefined, db);
                                 view.expression = dbView["value"];
                                 return view;
@@ -1560,17 +1708,29 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
      */
     AuroraDataApiQueryRunner.prototype.loadTables = function (tableNames) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var currentDatabase, tablesCondition, tablesSql, columnsSql, primaryKeySql, collationsSql, indicesCondition, indicesSql, foreignKeysCondition, foreignKeysSql, _a, dbTables, dbColumns, dbPrimaryKeys, dbCollations, dbIndices, dbForeignKeys;
+            var dbTables, currentDatabase, tablesSql, _a, _b, _c, _d, tablesCondition, tablesSql, _e, _f, _g, _h, columnsCondition, columnsSql, primaryKeySql, collationsSql, indicesCondition, indicesSql, foreignKeysCondition, foreignKeysSql, _j, dbColumns, dbPrimaryKeys, dbCollations, dbIndices, dbForeignKeys;
             var _this = this;
-            return tslib_1.__generator(this, function (_b) {
-                switch (_b.label) {
+            return tslib_1.__generator(this, function (_k) {
+                switch (_k.label) {
                     case 0:
                         // if no tables given then no need to proceed
-                        if (!tableNames || !tableNames.length)
+                        if (tableNames && tableNames.length === 0) {
                             return [2 /*return*/, []];
+                        }
+                        dbTables = [];
                         return [4 /*yield*/, this.getCurrentDatabase()];
                     case 1:
-                        currentDatabase = _b.sent();
+                        currentDatabase = _k.sent();
+                        if (!!tableNames) return [3 /*break*/, 3];
+                        tablesSql = "SELECT TABLE_NAME, TABLE_SCHEMA FROM `INFORMATION_SCHEMA`.`TABLES`";
+                        _b = (_a = dbTables.push).apply;
+                        _c = [dbTables];
+                        _d = [[]];
+                        return [4 /*yield*/, this.query(tablesSql)];
+                    case 2:
+                        _b.apply(_a, _c.concat([tslib_1.__spreadArray.apply(void 0, _d.concat([tslib_1.__read.apply(void 0, [_k.sent()])]))]));
+                        return [3 /*break*/, 5];
+                    case 3:
                         tablesCondition = tableNames.map(function (tableName) {
                             var _a = tslib_1.__read(tableName.split("."), 2), database = _a[0], name = _a[1];
                             if (!name) {
@@ -1579,28 +1739,35 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                             }
                             return "(`TABLE_SCHEMA` = '" + database + "' AND `TABLE_NAME` = '" + name + "')";
                         }).join(" OR ");
-                        tablesSql = "SELECT * FROM `INFORMATION_SCHEMA`.`TABLES` WHERE " + tablesCondition;
-                        columnsSql = "SELECT * FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE " + tablesCondition;
-                        primaryKeySql = "SELECT * FROM `INFORMATION_SCHEMA`.`KEY_COLUMN_USAGE` WHERE `CONSTRAINT_NAME` = 'PRIMARY' AND (" + tablesCondition + ")";
+                        tablesSql = "SELECT TABLE_NAME, TABLE_SCHEMA FROM `INFORMATION_SCHEMA`.`TABLES` WHERE " + tablesCondition;
+                        _f = (_e = dbTables.push).apply;
+                        _g = [dbTables];
+                        _h = [[]];
+                        return [4 /*yield*/, this.query(tablesSql)];
+                    case 4:
+                        _f.apply(_e, _g.concat([tslib_1.__spreadArray.apply(void 0, _h.concat([tslib_1.__read.apply(void 0, [_k.sent()])]))]));
+                        _k.label = 5;
+                    case 5:
+                        if (dbTables.length === 0) {
+                            return [2 /*return*/, []];
+                        }
+                        columnsCondition = dbTables.map(function (_a) {
+                            var TABLE_NAME = _a.TABLE_NAME, TABLE_SCHEMA = _a.TABLE_SCHEMA;
+                            return "(`TABLE_SCHEMA` = '" + TABLE_SCHEMA + "' AND `TABLE_NAME` = '" + TABLE_NAME + "')";
+                        }).join(" OR ");
+                        columnsSql = "SELECT * FROM `INFORMATION_SCHEMA`.`COLUMNS` WHERE " + columnsCondition;
+                        primaryKeySql = "SELECT * FROM `INFORMATION_SCHEMA`.`KEY_COLUMN_USAGE` WHERE `CONSTRAINT_NAME` = 'PRIMARY' AND (" + columnsCondition + ")";
                         collationsSql = "SELECT `SCHEMA_NAME`, `DEFAULT_CHARACTER_SET_NAME` as `CHARSET`, `DEFAULT_COLLATION_NAME` AS `COLLATION` FROM `INFORMATION_SCHEMA`.`SCHEMATA`";
-                        indicesCondition = tableNames.map(function (tableName) {
-                            var _a = tslib_1.__read(tableName.split("."), 2), database = _a[0], name = _a[1];
-                            if (!name) {
-                                name = database;
-                                database = _this.driver.database || currentDatabase;
-                            }
-                            return "(`s`.`TABLE_SCHEMA` = '" + database + "' AND `s`.`TABLE_NAME` = '" + name + "')";
+                        indicesCondition = dbTables.map(function (_a) {
+                            var TABLE_NAME = _a.TABLE_NAME, TABLE_SCHEMA = _a.TABLE_SCHEMA;
+                            return "(`s`.`TABLE_SCHEMA` = '" + TABLE_SCHEMA + "' AND `s`.`TABLE_NAME` = '" + TABLE_NAME + "')";
                         }).join(" OR ");
                         indicesSql = "SELECT `s`.* FROM `INFORMATION_SCHEMA`.`STATISTICS` `s` " +
                             "LEFT JOIN `INFORMATION_SCHEMA`.`REFERENTIAL_CONSTRAINTS` `rc` ON `s`.`INDEX_NAME` = `rc`.`CONSTRAINT_NAME` " +
                             ("WHERE (" + indicesCondition + ") AND `s`.`INDEX_NAME` != 'PRIMARY' AND `rc`.`CONSTRAINT_NAME` IS NULL");
-                        foreignKeysCondition = tableNames.map(function (tableName) {
-                            var _a = tslib_1.__read(tableName.split("."), 2), database = _a[0], name = _a[1];
-                            if (!name) {
-                                name = database;
-                                database = _this.driver.database || currentDatabase;
-                            }
-                            return "(`kcu`.`TABLE_SCHEMA` = '" + database + "' AND `kcu`.`TABLE_NAME` = '" + name + "')";
+                        foreignKeysCondition = dbTables.map(function (_a) {
+                            var TABLE_NAME = _a.TABLE_NAME, TABLE_SCHEMA = _a.TABLE_SCHEMA;
+                            return "(`kcu`.`TABLE_SCHEMA` = '" + TABLE_SCHEMA + "' AND `kcu`.`TABLE_NAME` = '" + TABLE_NAME + "')";
                         }).join(" OR ");
                         foreignKeysSql = "SELECT `kcu`.`TABLE_SCHEMA`, `kcu`.`TABLE_NAME`, `kcu`.`CONSTRAINT_NAME`, `kcu`.`COLUMN_NAME`, `kcu`.`REFERENCED_TABLE_SCHEMA`, " +
                             "`kcu`.`REFERENCED_TABLE_NAME`, `kcu`.`REFERENCED_COLUMN_NAME`, `rc`.`DELETE_RULE` `ON_DELETE`, `rc`.`UPDATE_RULE` `ON_UPDATE` " +
@@ -1608,21 +1775,17 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                             "INNER JOIN `INFORMATION_SCHEMA`.`REFERENTIAL_CONSTRAINTS` `rc` ON `rc`.`constraint_name` = `kcu`.`constraint_name` " +
                             "WHERE " + foreignKeysCondition;
                         return [4 /*yield*/, Promise.all([
-                                this.query(tablesSql),
                                 this.query(columnsSql),
                                 this.query(primaryKeySql),
                                 this.query(collationsSql),
                                 this.query(indicesSql),
                                 this.query(foreignKeysSql)
                             ])];
-                    case 2:
-                        _a = tslib_1.__read.apply(void 0, [_b.sent(), 6]), dbTables = _a[0], dbColumns = _a[1], dbPrimaryKeys = _a[2], dbCollations = _a[3], dbIndices = _a[4], dbForeignKeys = _a[5];
-                        // if tables were not found in the db, no need to proceed
-                        if (!dbTables.length)
-                            return [2 /*return*/, []];
+                    case 6:
+                        _j = tslib_1.__read.apply(void 0, [_k.sent(), 5]), dbColumns = _j[0], dbPrimaryKeys = _j[1], dbCollations = _j[2], dbIndices = _j[3], dbForeignKeys = _j[4];
                         // create tables for loaded tables
                         return [2 /*return*/, Promise.all(dbTables.map(function (dbTable) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
-                                var table, dbCollation, defaultCollation, defaultCharset, db, tableFullName, tableForeignKeyConstraints, tableIndexConstraints;
+                                var table, dbCollation, defaultCollation, defaultCharset, db, tableForeignKeyConstraints, tableIndexConstraints;
                                 var _this = this;
                                 return tslib_1.__generator(this, function (_a) {
                                     table = new Table_1.Table();
@@ -1630,15 +1793,14 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                                     defaultCollation = dbCollation["COLLATION"];
                                     defaultCharset = dbCollation["CHARSET"];
                                     db = dbTable["TABLE_SCHEMA"] === currentDatabase ? undefined : dbTable["TABLE_SCHEMA"];
+                                    table.database = dbTable["TABLE_SCHEMA"];
                                     table.name = this.driver.buildTableName(dbTable["TABLE_NAME"], undefined, db);
-                                    tableFullName = this.driver.buildTableName(dbTable["TABLE_NAME"], undefined, dbTable["TABLE_SCHEMA"]);
                                     // create columns from the loaded columns
                                     table.columns = dbColumns
-                                        .filter(function (dbColumn) { return _this.driver.buildTableName(dbColumn["TABLE_NAME"], undefined, dbColumn["TABLE_SCHEMA"]) === tableFullName; })
+                                        .filter(function (dbColumn) { return dbColumn["TABLE_NAME"] === dbTable["TABLE_NAME"] && dbColumn["TABLE_SCHEMA"] === dbTable["TABLE_SCHEMA"]; })
                                         .map(function (dbColumn) {
                                         var columnUniqueIndex = dbIndices.find(function (dbIndex) {
-                                            var indexTableFullName = _this.driver.buildTableName(dbIndex["TABLE_NAME"], undefined, dbIndex["TABLE_SCHEMA"]);
-                                            if (indexTableFullName !== tableFullName) {
+                                            if (dbIndex["TABLE_NAME"] !== dbTable["TABLE_NAME"] || dbIndex["TABLE_SCHEMA"] !== dbTable["TABLE_SCHEMA"]) {
                                                 return false;
                                             }
                                             // Index is not for this column
@@ -1648,7 +1810,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                                             var nonUnique = parseInt(dbIndex["NON_UNIQUE"], 10);
                                             return nonUnique === 0;
                                         });
-                                        var tableMetadata = _this.connection.entityMetadatas.find(function (metadata) { return metadata.tablePath === table.name; });
+                                        var tableMetadata = _this.connection.entityMetadatas.find(function (metadata) { return _this.getTablePath(table) === _this.getTablePath(metadata); });
                                         var hasIgnoredIndex = columnUniqueIndex && tableMetadata && tableMetadata.indices
                                             .some(function (index) { return index.name === columnUniqueIndex["INDEX_NAME"] && index.synchronize === false; });
                                         var isConstraintComposite = columnUniqueIndex
@@ -1678,7 +1840,9 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                                         tableColumn.isUnique = !!columnUniqueIndex && !hasIgnoredIndex && !isConstraintComposite;
                                         tableColumn.isNullable = dbColumn["IS_NULLABLE"] === "YES";
                                         tableColumn.isPrimary = dbPrimaryKeys.some(function (dbPrimaryKey) {
-                                            return _this.driver.buildTableName(dbPrimaryKey["TABLE_NAME"], undefined, dbPrimaryKey["TABLE_SCHEMA"]) === tableFullName && dbPrimaryKey["COLUMN_NAME"] === tableColumn.name;
+                                            return (dbPrimaryKey["TABLE_NAME"] === dbColumn["TABLE_NAME"] &&
+                                                dbPrimaryKey["TABLE_SCHEMA"] === dbColumn["TABLE_SCHEMA"] &&
+                                                dbPrimaryKey["COLUMN_NAME"] === dbColumn["COLUMN_NAME"]);
                                         });
                                         tableColumn.zerofill = dbColumn["COLUMN_TYPE"].indexOf("zerofill") !== -1;
                                         tableColumn.unsigned = tableColumn.zerofill ? true : dbColumn["COLUMN_TYPE"].indexOf("unsigned") !== -1;
@@ -1701,9 +1865,9 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                                             if (dbColumn["NUMERIC_SCALE"] !== null && !_this.isDefaultColumnScale(table, tableColumn, dbColumn["NUMERIC_SCALE"]))
                                                 tableColumn.scale = parseInt(dbColumn["NUMERIC_SCALE"]);
                                         }
-                                        if (tableColumn.type === "enum" || tableColumn.type === "simple-enum") {
+                                        if (tableColumn.type === "enum" || tableColumn.type === "simple-enum" || tableColumn.type === "set") {
                                             var colType = dbColumn["COLUMN_TYPE"];
-                                            var items = colType.substring(colType.indexOf("(") + 1, colType.indexOf(")")).split(",");
+                                            var items = colType.substring(colType.indexOf("(") + 1, colType.lastIndexOf(")")).split(",");
                                             tableColumn.enum = items.map(function (item) {
                                                 return item.substring(1, item.length - 1);
                                             });
@@ -1717,7 +1881,8 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                                         return tableColumn;
                                     });
                                     tableForeignKeyConstraints = OrmUtils_1.OrmUtils.uniq(dbForeignKeys.filter(function (dbForeignKey) {
-                                        return _this.driver.buildTableName(dbForeignKey["TABLE_NAME"], undefined, dbForeignKey["TABLE_SCHEMA"]) === tableFullName;
+                                        return (dbForeignKey["TABLE_NAME"] === dbTable["TABLE_NAME"] &&
+                                            dbForeignKey["TABLE_SCHEMA"] === dbTable["TABLE_SCHEMA"]);
                                     }), function (dbForeignKey) { return dbForeignKey["CONSTRAINT_NAME"]; });
                                     table.foreignKeys = tableForeignKeyConstraints.map(function (dbForeignKey) {
                                         var foreignKeys = dbForeignKeys.filter(function (dbFk) { return dbFk["CONSTRAINT_NAME"] === dbForeignKey["CONSTRAINT_NAME"]; });
@@ -1727,6 +1892,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                                         return new TableForeignKey_1.TableForeignKey({
                                             name: dbForeignKey["CONSTRAINT_NAME"],
                                             columnNames: foreignKeys.map(function (dbFk) { return dbFk["COLUMN_NAME"]; }),
+                                            referencedDatabase: dbForeignKey["REFERENCED_TABLE_SCHEMA"],
                                             referencedTableName: referencedTableName,
                                             referencedColumnNames: foreignKeys.map(function (dbFk) { return dbFk["REFERENCED_COLUMN_NAME"]; }),
                                             onDelete: dbForeignKey["ON_DELETE"],
@@ -1734,7 +1900,8 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
                                         });
                                     });
                                     tableIndexConstraints = OrmUtils_1.OrmUtils.uniq(dbIndices.filter(function (dbIndex) {
-                                        return _this.driver.buildTableName(dbIndex["TABLE_NAME"], undefined, dbIndex["TABLE_SCHEMA"]) === tableFullName;
+                                        return (dbIndex["TABLE_NAME"] === dbTable["TABLE_NAME"] &&
+                                            dbIndex["TABLE_SCHEMA"] === dbTable["TABLE_SCHEMA"]);
                                     }), function (dbIndex) { return dbIndex["INDEX_NAME"]; });
                                     table.indices = tableIndexConstraints.map(function (constraint) {
                                         var indices = dbIndices.filter(function (index) {
@@ -1779,7 +1946,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
             });
             if (!isUniqueIndexExist && !isUniqueConstraintExist)
                 table.indices.push(new TableIndex_1.TableIndex({
-                    name: _this.connection.namingStrategy.uniqueConstraintName(table.name, [column.name]),
+                    name: _this.connection.namingStrategy.uniqueConstraintName(table, [column.name]),
                     columnNames: [column.name],
                     isUnique: true
                 }));
@@ -1801,7 +1968,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
             var indicesSql = table.indices.map(function (index) {
                 var columnNames = index.columnNames.map(function (columnName) { return "`" + columnName + "`"; }).join(", ");
                 if (!index.name)
-                    index.name = _this.connection.namingStrategy.indexName(table.name, index.columnNames, index.where);
+                    index.name = _this.connection.namingStrategy.indexName(table, index.columnNames, index.where);
                 var indexType = "";
                 if (index.isUnique)
                     indexType += "UNIQUE ";
@@ -1817,9 +1984,9 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
             var foreignKeysSql = table.foreignKeys.map(function (fk) {
                 var columnNames = fk.columnNames.map(function (columnName) { return "`" + columnName + "`"; }).join(", ");
                 if (!fk.name)
-                    fk.name = _this.connection.namingStrategy.foreignKeyName(table.name, fk.columnNames);
+                    fk.name = _this.connection.namingStrategy.foreignKeyName(table, fk.columnNames);
                 var referencedColumnNames = fk.referencedColumnNames.map(function (columnName) { return "`" + columnName + "`"; }).join(", ");
-                var constraint = "CONSTRAINT `" + fk.name + "` FOREIGN KEY (" + columnNames + ") REFERENCES " + _this.escapePath(fk.referencedTableName) + " (" + referencedColumnNames + ")";
+                var constraint = "CONSTRAINT `" + fk.name + "` FOREIGN KEY (" + columnNames + ") REFERENCES " + _this.escapePath(_this.getTablePath(fk)) + " (" + referencedColumnNames + ")";
                 if (fk.onDelete)
                     constraint += " ON DELETE " + fk.onDelete;
                 if (fk.onUpdate)
@@ -1939,7 +2106,7 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
         var columnNames = foreignKey.columnNames.map(function (column) { return "`" + column + "`"; }).join(", ");
         var referencedColumnNames = foreignKey.referencedColumnNames.map(function (column) { return "`" + column + "`"; }).join(",");
         var sql = "ALTER TABLE " + this.escapePath(table) + " ADD CONSTRAINT `" + foreignKey.name + "` FOREIGN KEY (" + columnNames + ") " +
-            ("REFERENCES " + this.escapePath(foreignKey.referencedTableName) + "(" + referencedColumnNames + ")");
+            ("REFERENCES " + this.escapePath(this.getTablePath(foreignKey)) + "(" + referencedColumnNames + ")");
         if (foreignKey.onDelete)
             sql += " ON DELETE " + foreignKey.onDelete;
         if (foreignKey.onUpdate)
@@ -1953,19 +2120,28 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
         var foreignKeyName = foreignKeyOrName instanceof TableForeignKey_1.TableForeignKey ? foreignKeyOrName.name : foreignKeyOrName;
         return new Query_1.Query("ALTER TABLE " + this.escapePath(table) + " DROP FOREIGN KEY `" + foreignKeyName + "`");
     };
-    AuroraDataApiQueryRunner.prototype.parseTableName = function (target) {
-        var tableName = target instanceof Table_1.Table ? target.name : target;
-        return {
-            database: tableName.indexOf(".") !== -1 ? tableName.split(".")[0] : this.driver.database,
-            tableName: tableName.indexOf(".") !== -1 ? tableName.split(".")[1] : tableName
-        };
+    /**
+     * Escapes a given comment so it's safe to include in a query.
+     */
+    AuroraDataApiQueryRunner.prototype.escapeComment = function (comment) {
+        if (!comment || comment.length === 0) {
+            return "''";
+        }
+        comment = comment
+            .replace(/\\/g, "\\\\") // MySQL allows escaping characters via backslashes
+            .replace(/'/g, "''")
+            .replace(/\u0000/g, ""); // Null bytes aren't allowed in comments
+        return "'" + comment + "'";
     };
     /**
      * Escapes given table or view path.
      */
-    AuroraDataApiQueryRunner.prototype.escapePath = function (target, disableEscape) {
-        var tableName = target instanceof Table_1.Table || target instanceof View_1.View ? target.name : target;
-        return tableName.split(".").map(function (i) { return disableEscape ? i : "`" + i + "`"; }).join(".");
+    AuroraDataApiQueryRunner.prototype.escapePath = function (target) {
+        var _a = this.driver.parseTableName(target), database = _a.database, tableName = _a.tableName;
+        if (database && database !== this.driver.database) {
+            return "`" + database + "`.`" + tableName + "`";
+        }
+        return "`" + tableName + "`";
     };
     /**
      * Builds a part of query to create/change a column.
@@ -2003,12 +2179,31 @@ var AuroraDataApiQueryRunner = /** @class */ (function (_super) {
         if (column.isGenerated && column.generationStrategy === "increment") // don't use skipPrimary here since updates can update already exist primary without auto inc.
             c += " AUTO_INCREMENT";
         if (column.comment)
-            c += " COMMENT '" + column.comment + "'";
+            c += " COMMENT " + this.escapeComment(column.comment);
         if (column.default !== undefined && column.default !== null)
             c += " DEFAULT " + column.default;
         if (column.onUpdate)
             c += " ON UPDATE " + column.onUpdate;
         return c;
+    };
+    /**
+     * Checks if column display width is by default.
+     */
+    AuroraDataApiQueryRunner.prototype.isDefaultColumnWidth = function (table, column, width) {
+        // if table have metadata, we check if length is specified in column metadata
+        if (this.connection.hasMetadata(table.name)) {
+            var metadata = this.connection.getMetadata(table.name);
+            var columnMetadata = metadata.findColumnWithDatabaseName(column.name);
+            if (columnMetadata && columnMetadata.width)
+                return false;
+        }
+        var defaultWidthForType = this.connection.driver.dataTypeDefaults
+            && this.connection.driver.dataTypeDefaults[column.type]
+            && this.connection.driver.dataTypeDefaults[column.type].width;
+        if (defaultWidthForType) {
+            return defaultWidthForType === width;
+        }
+        return false;
     };
     return AuroraDataApiQueryRunner;
 }(BaseQueryRunner_1.BaseQueryRunner));

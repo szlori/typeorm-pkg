@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var index_1 = require("../index");
+exports.Unique = void 0;
+var globals_1 = require("../globals");
 /**
  * Composite unique constraint must be set on entity classes and must specify entity's fields to be unique.
  */
@@ -24,7 +25,7 @@ function Unique(nameOrFields, maybeFields) {
             name: name,
             columns: columns,
         };
-        index_1.getMetadataArgsStorage().uniques.push(args);
+        globals_1.getMetadataArgsStorage().uniques.push(args);
     };
 }
 exports.Unique = Unique;

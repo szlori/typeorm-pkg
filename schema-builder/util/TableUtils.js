@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.TableUtils = void 0;
 var TableUtils = /** @class */ (function () {
     function TableUtils() {
     }
     TableUtils.createTableColumnOptions = function (columnMetadata, driver) {
         return {
             name: columnMetadata.databaseName,
-            length: columnMetadata.length,
+            length: driver.getColumnLength(columnMetadata),
             width: columnMetadata.width,
             charset: columnMetadata.charset,
             collation: columnMetadata.collation,

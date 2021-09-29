@@ -1,5 +1,6 @@
-import * as tslib_1 from "tslib";
+import { __awaiter, __generator } from "tslib";
 import { PlatformTools } from "../platform/PlatformTools";
+import { TypeORMError } from "../error/TypeORMError";
 /**
  * Caches query result into Redis database.
  */
@@ -19,9 +20,9 @@ var RedisQueryResultCache = /** @class */ (function () {
      * Creates a connection with given cache provider.
      */
     RedisQueryResultCache.prototype.connect = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var cacheOptions;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 cacheOptions = this.connection.options.cache;
                 if (this.clientType === "redis") {
                     if (cacheOptions && cacheOptions.options) {
@@ -32,7 +33,15 @@ var RedisQueryResultCache = /** @class */ (function () {
                     }
                 }
                 else if (this.clientType === "ioredis") {
-                    if (cacheOptions && cacheOptions.options) {
+                    if (cacheOptions && cacheOptions.port) {
+                        if (cacheOptions.options) {
+                            this.client = new this.redis(cacheOptions.port, cacheOptions.options);
+                        }
+                        else {
+                            this.client = new this.redis(cacheOptions.port);
+                        }
+                    }
+                    else if (cacheOptions && cacheOptions.options) {
                         this.client = new this.redis(cacheOptions.options);
                     }
                     else {
@@ -47,7 +56,7 @@ var RedisQueryResultCache = /** @class */ (function () {
                         this.client = new this.redis.Cluster(cacheOptions.options.startupNodes, cacheOptions.options.options);
                     }
                     else {
-                        throw new Error("options.startupNodes required for " + this.clientType + ".");
+                        throw new TypeORMError("options.startupNodes required for " + this.clientType + ".");
                     }
                 }
                 return [2 /*return*/];
@@ -58,9 +67,9 @@ var RedisQueryResultCache = /** @class */ (function () {
      * Disconnects the connection
      */
     RedisQueryResultCache.prototype.disconnect = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var _this = this;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 return [2 /*return*/, new Promise(function (ok, fail) {
                         _this.client.quit(function (err, result) {
                             if (err)
@@ -76,8 +85,8 @@ var RedisQueryResultCache = /** @class */ (function () {
      * Creates table for storing cache if it does not exist yet.
      */
     RedisQueryResultCache.prototype.synchronize = function (queryRunner) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            return tslib_1.__generator(this, function (_a) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
                 return [2 /*return*/];
             });
         });
@@ -119,9 +128,9 @@ var RedisQueryResultCache = /** @class */ (function () {
      * Stores given query result in the cache.
      */
     RedisQueryResultCache.prototype.storeInCache = function (options, savedCache, queryRunner) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var _this = this;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 return [2 /*return*/, new Promise(function (ok, fail) {
                         if (options.identifier) {
                             _this.client.set(options.identifier, JSON.stringify(options), "PX", options.duration, function (err, result) {
@@ -145,9 +154,9 @@ var RedisQueryResultCache = /** @class */ (function () {
      * Clears everything stored in the cache.
      */
     RedisQueryResultCache.prototype.clear = function (queryRunner) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var _this = this;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 return [2 /*return*/, new Promise(function (ok, fail) {
                         _this.client.flushdb(function (err, result) {
                             if (err)
@@ -162,9 +171,9 @@ var RedisQueryResultCache = /** @class */ (function () {
      * Removes all cached results by given identifiers from cache.
      */
     RedisQueryResultCache.prototype.remove = function (identifiers, queryRunner) {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var _this = this;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, Promise.all(identifiers.map(function (identifier) {
                             return _this.deleteKey(identifier);
@@ -197,10 +206,15 @@ var RedisQueryResultCache = /** @class */ (function () {
      */
     RedisQueryResultCache.prototype.loadRedis = function () {
         try {
-            return PlatformTools.load(this.clientType);
+            if (this.clientType === "ioredis/cluster") {
+                return PlatformTools.load("ioredis");
+            }
+            else {
+                return PlatformTools.load(this.clientType);
+            }
         }
         catch (e) {
-            throw new Error("Cannot use cache because " + this.clientType + " is not installed. Please run \"npm i " + this.clientType + " --save\".");
+            throw new TypeORMError("Cannot use cache because " + this.clientType + " is not installed. Please run \"npm i " + this.clientType + " --save\".");
         }
     };
     return RedisQueryResultCache;

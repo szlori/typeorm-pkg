@@ -1,5 +1,5 @@
-import * as tslib_1 from "tslib";
-import { getConnection } from "../index";
+import { __awaiter, __generator, __read, __spreadArray } from "tslib";
+import { getConnection } from "../globals";
 import { ObjectUtils } from "../util/ObjectUtils";
 /**
  * Base abstract entity for all entities, used in ActiveRecord patterns.
@@ -46,9 +46,9 @@ var BaseEntity = /** @class */ (function () {
      * Reloads entity data from the database.
      */
     BaseEntity.prototype.reload = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
+        return __awaiter(this, void 0, void 0, function () {
             var base, newestEntity;
-            return tslib_1.__generator(this, function (_a) {
+            return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         base = this.constructor;
@@ -86,7 +86,7 @@ var BaseEntity = /** @class */ (function () {
         get: function () {
             return this.getRepository().target;
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     /**
@@ -119,12 +119,12 @@ var BaseEntity = /** @class */ (function () {
      * Merges multiple entities (or entity-like objects) into a given entity.
      */
     BaseEntity.merge = function (mergeIntoEntity) {
+        var _a;
         var entityLikes = [];
         for (var _i = 1; _i < arguments.length; _i++) {
             entityLikes[_i - 1] = arguments[_i];
         }
-        var _a;
-        return (_a = this.getRepository()).merge.apply(_a, tslib_1.__spread([mergeIntoEntity], entityLikes));
+        return (_a = this.getRepository()).merge.apply(_a, __spreadArray([mergeIntoEntity], __read(entityLikes)));
     };
     /**
      * Creates a new entity from the given plain javascript object. If entity already exist in the database, then

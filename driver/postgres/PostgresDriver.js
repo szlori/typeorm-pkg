@@ -1,16 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.PostgresDriver = void 0;
 var tslib_1 = require("tslib");
 var ConnectionIsNotSetError_1 = require("../../error/ConnectionIsNotSetError");
 var DriverPackageNotInstalledError_1 = require("../../error/DriverPackageNotInstalledError");
-var DriverUtils_1 = require("../DriverUtils");
-var PostgresQueryRunner_1 = require("./PostgresQueryRunner");
-var DateUtils_1 = require("../../util/DateUtils");
+var EntityMetadata_1 = require("../../metadata/EntityMetadata");
 var PlatformTools_1 = require("../../platform/PlatformTools");
 var RdbmsSchemaBuilder_1 = require("../../schema-builder/RdbmsSchemaBuilder");
-var OrmUtils_1 = require("../../util/OrmUtils");
 var ApplyValueTransformers_1 = require("../../util/ApplyValueTransformers");
-var AuroraDataApiPostgresQueryRunner_1 = require("../aurora-data-api-pg/AuroraDataApiPostgresQueryRunner");
+var DateUtils_1 = require("../../util/DateUtils");
+var OrmUtils_1 = require("../../util/OrmUtils");
+var PostgresQueryRunner_1 = require("./PostgresQueryRunner");
+var DriverUtils_1 = require("../DriverUtils");
+var error_1 = require("../../error");
+var Table_1 = require("../../schema-builder/table/Table");
+var View_1 = require("../../schema-builder/view/View");
+var TableForeignKey_1 = require("../../schema-builder/table/TableForeignKey");
 /**
  * Organizes communication with PostgreSQL DBMS.
  */
@@ -200,8 +205,13 @@ var PostgresDriver = /** @class */ (function () {
         this.connection = connection;
         this.options = connection.options;
         this.isReplicated = this.options.replication ? true : false;
+        if (this.options.useUTC) {
+            process.env.PGTZ = 'UTC';
+        }
         // load postgres package
         this.loadDependencies();
+        this.database = DriverUtils_1.DriverUtils.buildDriverOptions(this.options.replication ? this.options.replication.master : this.options).database;
+        this.schema = DriverUtils_1.DriverUtils.buildDriverOptions(this.options).schema;
         // ObjectUtils.assign(this.options, DriverUtils.buildDriverOptions(connection.options)); // todo: do it better way
         // validate options to make sure everything is set
         // todo: revisit validation with replication in mind
@@ -222,10 +232,10 @@ var PostgresDriver = /** @class */ (function () {
      */
     PostgresDriver.prototype.connect = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var _a, _b, _c;
+            var _a, _b, _c, queryRunner, _d, _e;
             var _this = this;
-            return tslib_1.__generator(this, function (_d) {
-                switch (_d.label) {
+            return tslib_1.__generator(this, function (_f) {
+                switch (_f.label) {
                     case 0:
                         if (!this.options.replication) return [3 /*break*/, 3];
                         _a = this;
@@ -233,21 +243,45 @@ var PostgresDriver = /** @class */ (function () {
                                 return _this.createPool(_this.options, slave);
                             }))];
                     case 1:
-                        _a.slaves = _d.sent();
+                        _a.slaves = _f.sent();
                         _b = this;
                         return [4 /*yield*/, this.createPool(this.options, this.options.replication.master)];
                     case 2:
-                        _b.master = _d.sent();
-                        this.database = this.options.replication.master.database;
+                        _b.master = _f.sent();
                         return [3 /*break*/, 5];
                     case 3:
                         _c = this;
                         return [4 /*yield*/, this.createPool(this.options, this.options)];
                     case 4:
-                        _c.master = _d.sent();
-                        this.database = this.options.database;
-                        _d.label = 5;
-                    case 5: return [2 /*return*/];
+                        _c.master = _f.sent();
+                        _f.label = 5;
+                    case 5:
+                        if (!(!this.database || !this.searchSchema)) return [3 /*break*/, 12];
+                        return [4 /*yield*/, this.createQueryRunner("master")];
+                    case 6:
+                        queryRunner = _f.sent();
+                        if (!!this.database) return [3 /*break*/, 8];
+                        _d = this;
+                        return [4 /*yield*/, queryRunner.getCurrentDatabase()];
+                    case 7:
+                        _d.database = _f.sent();
+                        _f.label = 8;
+                    case 8:
+                        if (!!this.searchSchema) return [3 /*break*/, 10];
+                        _e = this;
+                        return [4 /*yield*/, queryRunner.getCurrentSchema()];
+                    case 9:
+                        _e.searchSchema = _f.sent();
+                        _f.label = 10;
+                    case 10: return [4 /*yield*/, queryRunner.release()];
+                    case 11:
+                        _f.sent();
+                        _f.label = 12;
+                    case 12:
+                        if (!this.schema) {
+                            this.schema = this.searchSchema;
+                        }
+                        return [2 /*return*/];
                 }
             });
         });
@@ -257,17 +291,17 @@ var PostgresDriver = /** @class */ (function () {
      */
     PostgresDriver.prototype.afterConnect = function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var extensionsMetadata;
+            var extensionsMetadata, installExtensions;
             var _this = this;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, this.checkMetadataForExtensions()];
                     case 1:
                         extensionsMetadata = _a.sent();
-                        if (!extensionsMetadata.hasExtensions) return [3 /*break*/, 3];
-                        return [4 /*yield*/, Promise.all(tslib_1.__spread([this.master], this.slaves).map(function (pool) {
-                                return new Promise(function (ok, fail) {
-                                    pool.connect(function (err, connection, release) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
+                        installExtensions = this.options.installExtensions === undefined || this.options.installExtensions;
+                        if (installExtensions && extensionsMetadata.hasExtensions) {
+                            return [2 /*return*/, new Promise(function (ok, fail) {
+                                    _this.master.connect(function (err, connection, release) { return tslib_1.__awaiter(_this, void 0, void 0, function () {
                                         return tslib_1.__generator(this, function (_a) {
                                             switch (_a.label) {
                                                 case 0: return [4 /*yield*/, this.enableExtensions(extensionsMetadata, connection)];
@@ -281,12 +315,9 @@ var PostgresDriver = /** @class */ (function () {
                                             }
                                         });
                                     }); });
-                                });
-                            }))];
-                    case 2:
-                        _a.sent();
-                        _a.label = 3;
-                    case 3: return [2 /*return*/, Promise.resolve()];
+                                })];
+                        }
+                        return [2 /*return*/, Promise.resolve()];
                 }
             });
         });
@@ -417,7 +448,7 @@ var PostgresDriver = /** @class */ (function () {
                     return metadata.columns.filter(function (column) { return _this.spatialTypes.indexOf(column.type) >= 0; }).length > 0;
                 });
                 hasLtreeColumns = this.connection.entityMetadatas.some(function (metadata) {
-                    return metadata.columns.filter(function (column) { return column.type === 'ltree'; }).length > 0;
+                    return metadata.columns.filter(function (column) { return column.type === "ltree"; }).length > 0;
                 });
                 hasExclusionConstraints = this.connection.entityMetadatas.some(function (metadata) {
                     return metadata.exclusions.length > 0;
@@ -469,7 +500,6 @@ var PostgresDriver = /** @class */ (function () {
      * Creates a query runner used to execute database queries.
      */
     PostgresDriver.prototype.createQueryRunner = function (mode) {
-        if (mode === void 0) { mode = "master"; }
         return new PostgresQueryRunner_1.PostgresQueryRunner(this, mode);
     };
     /**
@@ -496,7 +526,7 @@ var PostgresDriver = /** @class */ (function () {
             || columnMetadata.type === "timestamp without time zone") {
             return DateUtils_1.DateUtils.mixedDateToDate(value);
         }
-        else if (tslib_1.__spread(["json", "jsonb"], this.spatialTypes).indexOf(columnMetadata.type) >= 0) {
+        else if (tslib_1.__spreadArray(["json", "jsonb"], tslib_1.__read(this.spatialTypes)).indexOf(columnMetadata.type) >= 0) {
             return JSON.stringify(value);
         }
         else if (columnMetadata.type === "hstore") {
@@ -531,7 +561,7 @@ var PostgresDriver = /** @class */ (function () {
             return "(" + value.join(",") + ")";
         }
         else if (columnMetadata.type === "ltree") {
-            return value.split(".").filter(Boolean).join('.').replace(/[\s]+/g, "_");
+            return value.split(".").filter(Boolean).join(".").replace(/[\s]+/g, "_");
         }
         else if ((columnMetadata.type === "enum"
             || columnMetadata.type === "simple-enum")
@@ -612,15 +642,25 @@ var PostgresDriver = /** @class */ (function () {
         }
         else if (columnMetadata.type === "enum" || columnMetadata.type === "simple-enum") {
             if (columnMetadata.isArray) {
+                if (value === "{}")
+                    return [];
                 // manually convert enum array to array of values (pg does not support, see https://github.com/brianc/node-pg-types/issues/56)
-                value = value !== "{}" ? value.substr(1, value.length - 2).split(",") : [];
-                // convert to number if that exists in poosible enum options
+                value = value.substr(1, value.length - 2).split(",").map(function (val) {
+                    // replace double quotes from the beginning and from the end
+                    if (val.startsWith("\"") && val.endsWith("\""))
+                        val = val.slice(1, -1);
+                    // replace double escaped backslash to single escaped e.g. \\\\ -> \\
+                    val = val.replace(/(\\\\)/g, "\\");
+                    // replace escaped double quotes to non-escaped e.g. \"asd\" -> "asd"
+                    return val.replace(/(\\")/g, '"');
+                });
+                // convert to number if that exists in possible enum options
                 value = value.map(function (val) {
                     return !isNaN(+val) && columnMetadata.enum.indexOf(parseInt(val)) >= 0 ? parseInt(val) : val;
                 });
             }
             else {
-                // convert to number if that exists in poosible enum options
+                // convert to number if that exists in possible enum options
                 value = !isNaN(+value) && columnMetadata.enum.indexOf(parseInt(value)) >= 0 ? parseInt(value) : value;
             }
         }
@@ -633,35 +673,28 @@ var PostgresDriver = /** @class */ (function () {
      * and an array of parameter names to be passed to a query.
      */
     PostgresDriver.prototype.escapeQueryWithParameters = function (sql, parameters, nativeParameters) {
-        var builtParameters = Object.keys(nativeParameters).map(function (key) { return nativeParameters[key]; });
+        var _this = this;
+        var escapedParameters = Object.keys(nativeParameters).map(function (key) { return nativeParameters[key]; });
         if (!parameters || !Object.keys(parameters).length)
-            return [sql, builtParameters];
-        var keys = Object.keys(parameters).map(function (parameter) { return "(:(\\.\\.\\.)?" + parameter + "\\b)"; }).join("|");
-        sql = sql.replace(new RegExp(keys, "g"), function (key) {
-            var value;
-            var isArray = false;
-            if (key.substr(0, 4) === ":...") {
-                isArray = true;
-                value = parameters[key.substr(4)];
+            return [sql, escapedParameters];
+        sql = sql.replace(/:(\.\.\.)?([A-Za-z0-9_.]+)/g, function (full, isArray, key) {
+            if (!parameters.hasOwnProperty(key)) {
+                return full;
             }
-            else {
-                value = parameters[key.substr(1)];
-            }
+            var value = parameters[key];
             if (isArray) {
                 return value.map(function (v) {
-                    builtParameters.push(v);
-                    return "$" + builtParameters.length;
+                    escapedParameters.push(v);
+                    return _this.createParameter(key, escapedParameters.length - 1);
                 }).join(", ");
             }
-            else if (value instanceof Function) {
+            if (value instanceof Function) {
                 return value();
             }
-            else {
-                builtParameters.push(value);
-                return "$" + builtParameters.length;
-            }
+            escapedParameters.push(value);
+            return _this.createParameter(key, escapedParameters.length - 1);
         }); // todo: make replace only in value statements, otherwise problems
-        return [sql, builtParameters];
+        return [sql, escapedParameters];
     };
     /**
      * Escapes a column name.
@@ -671,10 +704,51 @@ var PostgresDriver = /** @class */ (function () {
     };
     /**
      * Build full table name with schema name and table name.
-     * E.g. "mySchema"."myTable"
+     * E.g. myDB.mySchema.myTable
      */
     PostgresDriver.prototype.buildTableName = function (tableName, schema) {
-        return schema ? schema + "." + tableName : tableName;
+        var tablePath = [tableName];
+        if (schema) {
+            tablePath.unshift(schema);
+        }
+        return tablePath.join('.');
+    };
+    /**
+     * Parse a target table name or other types and return a normalized table definition.
+     */
+    PostgresDriver.prototype.parseTableName = function (target) {
+        var driverDatabase = this.database;
+        var driverSchema = this.schema;
+        if (target instanceof Table_1.Table || target instanceof View_1.View) {
+            var parsed = this.parseTableName(target.name);
+            return {
+                database: target.database || parsed.database || driverDatabase,
+                schema: target.schema || parsed.schema || driverSchema,
+                tableName: parsed.tableName
+            };
+        }
+        if (target instanceof TableForeignKey_1.TableForeignKey) {
+            var parsed = this.parseTableName(target.referencedTableName);
+            return {
+                database: target.referencedDatabase || parsed.database || driverDatabase,
+                schema: target.referencedSchema || parsed.schema || driverSchema,
+                tableName: parsed.tableName
+            };
+        }
+        if (target instanceof EntityMetadata_1.EntityMetadata) {
+            // EntityMetadata tableName is never a path
+            return {
+                database: target.database || driverDatabase,
+                schema: target.schema || driverSchema,
+                tableName: target.tableName
+            };
+        }
+        var parts = target.split(".");
+        return {
+            database: driverDatabase,
+            schema: (parts.length > 1 ? parts[0] : undefined) || driverSchema,
+            tableName: parts.length > 1 ? parts[1] : parts[0],
+        };
     };
     /**
      * Creates a database type from a given column metadata.
@@ -740,35 +814,48 @@ var PostgresDriver = /** @class */ (function () {
      */
     PostgresDriver.prototype.normalizeDefault = function (columnMetadata) {
         var defaultValue = columnMetadata.default;
-        var arrayCast = columnMetadata.isArray ? "::" + columnMetadata.type + "[]" : "";
+        if (defaultValue === null) {
+            return undefined;
+        }
+        if (columnMetadata.isArray && Array.isArray(defaultValue)) {
+            return "'{" + defaultValue.map(function (val) { return "" + val; }).join(",") + "}'";
+        }
         if ((columnMetadata.type === "enum"
-            || columnMetadata.type === "simple-enum") && defaultValue !== undefined) {
-            if (columnMetadata.isArray && Array.isArray(defaultValue)) {
-                return "'{" + defaultValue.map(function (val) { return "" + val; }).join(",") + "}'";
-            }
+            || columnMetadata.type === "simple-enum"
+            || typeof defaultValue === "number"
+            || typeof defaultValue === "string")
+            && defaultValue !== undefined) {
             return "'" + defaultValue + "'";
         }
-        if (typeof defaultValue === "number") {
-            return "" + defaultValue;
+        if (typeof defaultValue === "boolean") {
+            return defaultValue ? "true" : "false";
         }
-        else if (typeof defaultValue === "boolean") {
-            return defaultValue === true ? "true" : "false";
+        if (typeof defaultValue === "function") {
+            var value = defaultValue();
+            return this.normalizeDatetimeFunction(value);
         }
-        else if (typeof defaultValue === "function") {
-            return defaultValue();
-        }
-        else if (typeof defaultValue === "string") {
-            return "'" + defaultValue + "'" + arrayCast;
-        }
-        else if (defaultValue === null) {
-            return "null";
-        }
-        else if (typeof defaultValue === "object") {
+        if (typeof defaultValue === "object") {
             return "'" + JSON.stringify(defaultValue) + "'";
         }
-        else {
-            return defaultValue;
+        if (defaultValue === undefined) {
+            return undefined;
         }
+        return "" + defaultValue;
+    };
+    /**
+     * Compares "default" value of the column.
+     * Postgres sorts json values before it is saved, so in that case a deep comparison has to be performed to see if has changed.
+     */
+    PostgresDriver.prototype.defaultEqual = function (columnMetadata, tableColumn) {
+        if (["json", "jsonb"].includes(columnMetadata.type)
+            && !["function", "undefined"].includes(typeof columnMetadata.default)) {
+            var tableColumnDefault = typeof tableColumn.default === "string" ?
+                JSON.parse(tableColumn.default.substring(1, tableColumn.default.length - 1)) :
+                tableColumn.default;
+            return OrmUtils_1.OrmUtils.deepCompare(columnMetadata.default, tableColumnDefault);
+        }
+        var columnDefault = this.lowerDefaultValueIfNecessary(this.normalizeDefault(columnMetadata));
+        return columnDefault === tableColumn.default;
     };
     /**
      * Normalizes "isUnique" value of the column.
@@ -831,6 +918,10 @@ var PostgresDriver = /** @class */ (function () {
     PostgresDriver.prototype.obtainMasterConnection = function () {
         var _this = this;
         return new Promise(function (ok, fail) {
+            if (!_this.master) {
+                fail(new error_1.TypeORMError("Driver not Connected"));
+                return;
+            }
             _this.master.connect(function (err, connection, release) {
                 err ? fail(err) : ok([connection, release]);
             });
@@ -842,13 +933,18 @@ var PostgresDriver = /** @class */ (function () {
      * If replication is not setup then returns master (default) connection's database connection.
      */
     PostgresDriver.prototype.obtainSlaveConnection = function () {
-        var _this = this;
-        if (!this.slaves.length)
-            return this.obtainMasterConnection();
-        return new Promise(function (ok, fail) {
-            var random = Math.floor(Math.random() * _this.slaves.length);
-            _this.slaves[random].connect(function (err, connection, release) {
-                err ? fail(err) : ok([connection, release]);
+        return tslib_1.__awaiter(this, void 0, void 0, function () {
+            var _this = this;
+            return tslib_1.__generator(this, function (_a) {
+                if (!this.slaves.length) {
+                    return [2 /*return*/, this.obtainMasterConnection()];
+                }
+                return [2 /*return*/, new Promise(function (ok, fail) {
+                        var random = Math.floor(Math.random() * _this.slaves.length);
+                        _this.slaves[random].connect(function (err, connection, release) {
+                            err ? fail(err) : ok([connection, release]);
+                        });
+                    })];
             });
         });
     };
@@ -879,20 +975,44 @@ var PostgresDriver = /** @class */ (function () {
             var tableColumn = tableColumns.find(function (c) { return c.name === columnMetadata.databaseName; });
             if (!tableColumn)
                 return false; // we don't need new columns, we only need exist and changed
-            return tableColumn.name !== columnMetadata.databaseName
+            var isColumnChanged = tableColumn.name !== columnMetadata.databaseName
                 || tableColumn.type !== _this.normalizeType(columnMetadata)
                 || tableColumn.length !== columnMetadata.length
+                || tableColumn.isArray !== columnMetadata.isArray
                 || tableColumn.precision !== columnMetadata.precision
-                || tableColumn.scale !== columnMetadata.scale
-                // || tableColumn.comment !== columnMetadata.comment // todo
-                || (!tableColumn.isGenerated && _this.lowerDefaultValueIfNecessary(_this.normalizeDefault(columnMetadata)) !== tableColumn.default) // we included check for generated here, because generated columns already can have default values
+                || (columnMetadata.scale !== undefined && tableColumn.scale !== columnMetadata.scale)
+                || tableColumn.comment !== _this.escapeComment(columnMetadata.comment)
+                || (!tableColumn.isGenerated && !_this.defaultEqual(columnMetadata, tableColumn)) // we included check for generated here, because generated columns already can have default values
                 || tableColumn.isPrimary !== columnMetadata.isPrimary
                 || tableColumn.isNullable !== columnMetadata.isNullable
                 || tableColumn.isUnique !== _this.normalizeIsUnique(columnMetadata)
+                || tableColumn.enumName !== columnMetadata.enumName
                 || (tableColumn.enum && columnMetadata.enum && !OrmUtils_1.OrmUtils.isArraysEqual(tableColumn.enum, columnMetadata.enum.map(function (val) { return val + ""; }))) // enums in postgres are always strings
                 || tableColumn.isGenerated !== columnMetadata.isGenerated
                 || (tableColumn.spatialFeatureType || "").toLowerCase() !== (columnMetadata.spatialFeatureType || "").toLowerCase()
                 || tableColumn.srid !== columnMetadata.srid;
+            // DEBUG SECTION
+            // if (isColumnChanged) {
+            //     console.log("table:", columnMetadata.entityMetadata.tableName);
+            //     console.log("name:", tableColumn.name, columnMetadata.databaseName);
+            //     console.log("type:", tableColumn.type, this.normalizeType(columnMetadata));
+            //     console.log("length:", tableColumn.length, columnMetadata.length);
+            //     console.log("isArray:", tableColumn.isArray, columnMetadata.isArray);
+            //     console.log("precision:", tableColumn.precision, columnMetadata.precision);
+            //     console.log("scale:", tableColumn.scale, columnMetadata.scale);
+            //     console.log("comment:", tableColumn.comment, this.escapeComment(columnMetadata.comment));
+            //     console.log("enumName:", tableColumn.enumName, columnMetadata.enumName);
+            //     console.log("enum:", tableColumn.enum && columnMetadata.enum && !OrmUtils.isArraysEqual(tableColumn.enum, columnMetadata.enum.map(val => val + "")));
+            //     console.log("isPrimary:", tableColumn.isPrimary, columnMetadata.isPrimary);
+            //     console.log("isNullable:", tableColumn.isNullable, columnMetadata.isNullable);
+            //     console.log("isUnique:", tableColumn.isUnique, this.normalizeIsUnique(columnMetadata));
+            //     console.log("isGenerated:", tableColumn.isGenerated, columnMetadata.isGenerated);
+            //     console.log("isGenerated 2:", !tableColumn.isGenerated && this.lowerDefaultValueIfNecessary(this.normalizeDefault(columnMetadata)) !== tableColumn.default);
+            //     console.log("spatialFeatureType:", (tableColumn.spatialFeatureType || "").toLowerCase(), (columnMetadata.spatialFeatureType || "").toLowerCase());
+            //     console.log("srid", tableColumn.srid, columnMetadata.srid);
+            //     console.log("==========================================");
+            // }
+            return isColumnChanged;
         });
     };
     PostgresDriver.prototype.lowerDefaultValueIfNecessary = function (value) {
@@ -916,11 +1036,17 @@ var PostgresDriver = /** @class */ (function () {
     PostgresDriver.prototype.isUUIDGenerationSupported = function () {
         return true;
     };
+    /**
+     * Returns true if driver supports fulltext indices.
+     */
+    PostgresDriver.prototype.isFullTextColumnTypeSupported = function () {
+        return false;
+    };
     Object.defineProperty(PostgresDriver.prototype, "uuidGenerator", {
         get: function () {
             return this.options.uuidExtension === "pgcrypto" ? "gen_random_uuid()" : "uuid_generate_v4()";
         },
-        enumerable: true,
+        enumerable: false,
         configurable: true
     });
     /**
@@ -940,7 +1066,7 @@ var PostgresDriver = /** @class */ (function () {
             return PlatformTools_1.PlatformTools.load("pg-query-stream");
         }
         catch (e) { // todo: better error for browser env
-            throw new Error("To use streams you should install pg-query-stream package. Please run npm i pg-query-stream --save command.");
+            throw new error_1.TypeORMError("To use streams you should install pg-query-stream package. Please run npm i pg-query-stream --save command.");
         }
     };
     // -------------------------------------------------------------------------
@@ -969,16 +1095,19 @@ var PostgresDriver = /** @class */ (function () {
     PostgresDriver.prototype.createPool = function (options, credentials) {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             var connectionOptions, pool, logger, poolErrorHandler;
+            var _this = this;
             return tslib_1.__generator(this, function (_a) {
-                credentials = Object.assign({}, credentials, DriverUtils_1.DriverUtils.buildDriverOptions(credentials)); // todo: do it better way
+                credentials = Object.assign({}, credentials);
                 connectionOptions = Object.assign({}, {
+                    connectionString: credentials.url,
                     host: credentials.host,
                     user: credentials.username,
                     password: credentials.password,
                     database: credentials.database,
                     port: credentials.port,
                     ssl: credentials.ssl,
-                    connectionTimeoutMillis: options.connectTimeoutMS
+                    connectionTimeoutMillis: options.connectTimeoutMS,
+                    application_name: options.applicationName
                 }, options.extra || {});
                 pool = new this.postgres.Pool(connectionOptions);
                 logger = this.connection.logger;
@@ -992,6 +1121,14 @@ var PostgresDriver = /** @class */ (function () {
                         pool.connect(function (err, connection, release) {
                             if (err)
                                 return fail(err);
+                            if (options.logNotifications) {
+                                connection.on("notice", function (msg) {
+                                    msg && _this.connection.logger.log("info", msg.message);
+                                });
+                                connection.on("notification", function (msg) {
+                                    msg && _this.connection.logger.log("info", "Received NOTIFY on channel " + msg.channel + ": " + msg.payload + ".");
+                                });
+                            }
                             release();
                             ok(pool);
                         });
@@ -1006,12 +1143,15 @@ var PostgresDriver = /** @class */ (function () {
         return tslib_1.__awaiter(this, void 0, void 0, function () {
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
-                    case 0: return [4 /*yield*/, Promise.all(this.connectedQueryRunners.map(function (queryRunner) { return queryRunner.release(); }))];
+                    case 0:
+                        if (!this.connectedQueryRunners.length) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this.connectedQueryRunners[0].release()];
                     case 1:
                         _a.sent();
-                        return [2 /*return*/, new Promise(function (ok, fail) {
-                                pool.end(function (err) { return err ? fail(err) : ok(); });
-                            })];
+                        return [3 /*break*/, 0];
+                    case 2: return [2 /*return*/, new Promise(function (ok, fail) {
+                            pool.end(function (err) { return err ? fail(err) : ok(); });
+                        })];
                 }
             });
         });
@@ -1020,7 +1160,9 @@ var PostgresDriver = /** @class */ (function () {
      * Executes given query.
      */
     PostgresDriver.prototype.executeQuery = function (connection, query) {
+        var _this = this;
         return new Promise(function (ok, fail) {
+            _this.connection.logger.logQuery(query);
             connection.query(query, function (err, result) {
                 if (err)
                     return fail(err);
@@ -1028,102 +1170,50 @@ var PostgresDriver = /** @class */ (function () {
             });
         });
     };
+    /**
+     * If parameter is a datetime function, e.g. "CURRENT_TIMESTAMP", normalizes it.
+     * Otherwise returns original input.
+     */
+    PostgresDriver.prototype.normalizeDatetimeFunction = function (value) {
+        // check if input is datetime function
+        var upperCaseValue = value.toUpperCase();
+        var isDatetimeFunction = upperCaseValue.indexOf("CURRENT_TIMESTAMP") !== -1
+            || upperCaseValue.indexOf("CURRENT_DATE") !== -1
+            || upperCaseValue.indexOf("CURRENT_TIME") !== -1
+            || upperCaseValue.indexOf("LOCALTIMESTAMP") !== -1
+            || upperCaseValue.indexOf("LOCALTIME") !== -1;
+        if (isDatetimeFunction) {
+            // extract precision, e.g. "(3)"
+            var precision = value.match(/\(\d+\)/);
+            if (upperCaseValue.indexOf("CURRENT_TIMESTAMP") !== -1) {
+                return precision ? "('now'::text)::timestamp" + precision[0] + " with time zone" : "now()";
+            }
+            else if (upperCaseValue === "CURRENT_DATE") {
+                return "('now'::text)::date";
+            }
+            else if (upperCaseValue.indexOf("CURRENT_TIME") !== -1) {
+                return precision ? "('now'::text)::time" + precision[0] + " with time zone" : "('now'::text)::time with time zone";
+            }
+            else if (upperCaseValue.indexOf("LOCALTIMESTAMP") !== -1) {
+                return precision ? "('now'::text)::timestamp" + precision[0] + " without time zone" : "('now'::text)::timestamp without time zone";
+            }
+            else if (upperCaseValue.indexOf("LOCALTIME") !== -1) {
+                return precision ? "('now'::text)::time" + precision[0] + " without time zone" : "('now'::text)::time without time zone";
+            }
+        }
+        return value;
+    };
+    /**
+     * Escapes a given comment.
+     */
+    PostgresDriver.prototype.escapeComment = function (comment) {
+        if (!comment)
+            return comment;
+        comment = comment.replace(/\u0000/g, ""); // Null bytes aren't allowed in comments
+        return comment;
+    };
     return PostgresDriver;
 }());
 exports.PostgresDriver = PostgresDriver;
-var PostgresWrapper = /** @class */ (function (_super) {
-    tslib_1.__extends(PostgresWrapper, _super);
-    function PostgresWrapper() {
-        return _super !== null && _super.apply(this, arguments) || this;
-    }
-    return PostgresWrapper;
-}(PostgresDriver));
-var AuroraDataApiPostgresDriver = /** @class */ (function (_super) {
-    tslib_1.__extends(AuroraDataApiPostgresDriver, _super);
-    // -------------------------------------------------------------------------
-    // Constructor
-    // -------------------------------------------------------------------------
-    function AuroraDataApiPostgresDriver(connection) {
-        var _this = _super.call(this) || this;
-        _this.connection = connection;
-        _this.options = connection.options;
-        _this.isReplicated = false;
-        // load data-api package
-        _this.loadDependencies();
-        _this.client = new _this.DataApiDriver(_this.options.region, _this.options.secretArn, _this.options.resourceArn, _this.options.database, function (query, parameters) { return _this.connection.logger.logQuery(query, parameters); }, _this.options.serviceConfigOptions, _this.options.formatOptions);
-        return _this;
-    }
-    // -------------------------------------------------------------------------
-    // Public Implemented Methods
-    // -------------------------------------------------------------------------
-    /**
-     * Performs connection to the database.
-     * Based on pooling options, it can either create connection immediately,
-     * either create a pool and create connection when needed.
-     */
-    AuroraDataApiPostgresDriver.prototype.connect = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            return tslib_1.__generator(this, function (_a) {
-                return [2 /*return*/];
-            });
-        });
-    };
-    /**
-     * Closes connection with database.
-     */
-    AuroraDataApiPostgresDriver.prototype.disconnect = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            return tslib_1.__generator(this, function (_a) {
-                return [2 /*return*/];
-            });
-        });
-    };
-    /**
-     * Creates a query runner used to execute database queries.
-     */
-    AuroraDataApiPostgresDriver.prototype.createQueryRunner = function (mode) {
-        if (mode === void 0) { mode = "master"; }
-        return new AuroraDataApiPostgresQueryRunner_1.AuroraDataApiPostgresQueryRunner(this, mode);
-    };
-    // -------------------------------------------------------------------------
-    // Protected Methods
-    // -------------------------------------------------------------------------
-    /**
-     * If driver dependency is not given explicitly, then try to load it via "require".
-     */
-    AuroraDataApiPostgresDriver.prototype.loadDependencies = function () {
-        var pg = PlatformTools_1.PlatformTools.load("typeorm-aurora-data-api-driver").pg;
-        this.DataApiDriver = pg;
-    };
-    /**
-     * Executes given query.
-     */
-    AuroraDataApiPostgresDriver.prototype.executeQuery = function (connection, query) {
-        return this.client.query(query);
-    };
-    /**
-     * Makes any action after connection (e.g. create extensions in Postgres driver).
-     */
-    AuroraDataApiPostgresDriver.prototype.afterConnect = function () {
-        return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var extensionsMetadata;
-            return tslib_1.__generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.checkMetadataForExtensions()];
-                    case 1:
-                        extensionsMetadata = _a.sent();
-                        if (!extensionsMetadata.hasExtensions) return [3 /*break*/, 3];
-                        return [4 /*yield*/, this.enableExtensions(extensionsMetadata, this.connection)];
-                    case 2:
-                        _a.sent();
-                        _a.label = 3;
-                    case 3: return [2 /*return*/, Promise.resolve()];
-                }
-            });
-        });
-    };
-    return AuroraDataApiPostgresDriver;
-}(PostgresWrapper));
-exports.AuroraDataApiPostgresDriver = AuroraDataApiPostgresDriver;
 
 //# sourceMappingURL=PostgresDriver.js.map

@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.EntityCreateCommand = void 0;
 var tslib_1 = require("tslib");
 var ConnectionOptionsReader_1 = require("../connection/ConnectionOptionsReader");
 var CommandUtils_1 = require("./CommandUtils");
-var chalk = require("chalk");
+var chalk_1 = tslib_1.__importDefault(require("chalk"));
 /**
  * Generates a new entity.
  */
@@ -55,27 +56,30 @@ var EntityCreateCommand = /** @class */ (function () {
                         return [4 /*yield*/, connectionOptionsReader.get(args.connection)];
                     case 2:
                         connectionOptions = _a.sent();
-                        directory = connectionOptions.cli ? connectionOptions.cli.entitiesDir : undefined;
+                        directory = connectionOptions.cli ? (connectionOptions.cli.entitiesDir || "") : "";
                         return [3 /*break*/, 4];
                     case 3:
                         err_1 = _a.sent();
                         return [3 /*break*/, 4];
                     case 4:
-                        path = process.cwd() + "/" + (directory ? (directory + "/") : "") + filename;
+                        if (directory && !directory.startsWith("/")) {
+                            directory = process.cwd() + "/" + directory;
+                        }
+                        path = (directory ? (directory + "/") : "") + filename;
                         return [4 /*yield*/, CommandUtils_1.CommandUtils.fileExists(path)];
                     case 5:
                         fileExists = _a.sent();
                         if (fileExists) {
-                            throw "File " + chalk.blue(path) + " already exists";
+                            throw "File " + chalk_1.default.blue(path) + " already exists";
                         }
                         return [4 /*yield*/, CommandUtils_1.CommandUtils.createFile(path, fileContent)];
                     case 6:
                         _a.sent();
-                        console.log(chalk.green("Entity " + chalk.blue(path) + " has been created successfully."));
+                        console.log(chalk_1.default.green("Entity " + chalk_1.default.blue(path) + " has been created successfully."));
                         return [3 /*break*/, 8];
                     case 7:
                         err_2 = _a.sent();
-                        console.log(chalk.black.bgRed("Error during entity creation:"));
+                        console.log(chalk_1.default.black.bgRed("Error during entity creation:"));
                         console.error(err_2);
                         process.exit(1);
                         return [3 /*break*/, 8];

@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.BetterSqlite3QueryRunner = void 0;
 var tslib_1 = require("tslib");
 var QueryRunnerAlreadyReleasedError_1 = require("../../error/QueryRunnerAlreadyReleasedError");
 var QueryFailedError_1 = require("../../error/QueryFailedError");
 var AbstractSqliteQueryRunner_1 = require("../sqlite-abstract/AbstractSqliteQueryRunner");
 var Broadcaster_1 = require("../../subscriber/Broadcaster");
+var QueryResult_1 = require("../../query-runner/QueryResult");
 /**
  * Runs queries on a single sqlite database connection.
  *
@@ -61,9 +63,10 @@ var BetterSqlite3QueryRunner = /** @class */ (function (_super) {
     /**
      * Executes a given SQL query.
      */
-    BetterSqlite3QueryRunner.prototype.query = function (query, parameters) {
+    BetterSqlite3QueryRunner.prototype.query = function (query, parameters, useStructuredResult) {
+        if (useStructuredResult === void 0) { useStructuredResult = false; }
         return tslib_1.__awaiter(this, void 0, void 0, function () {
-            var connection, i, queryStartTime, stmt, result, maxQueryExecutionTime, queryEndTime, queryExecutionTime;
+            var connection, i, queryStartTime, stmt, result, raw, raw, maxQueryExecutionTime, queryEndTime, queryExecutionTime;
             return tslib_1.__generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -82,21 +85,27 @@ var BetterSqlite3QueryRunner = /** @class */ (function (_super) {
                     case 1:
                         stmt = _a.sent();
                         try {
-                            result = void 0;
+                            result = new QueryResult_1.QueryResult();
                             if (stmt.reader) {
-                                result = stmt.all.apply(stmt, parameters);
-                            }
-                            else {
-                                result = stmt.run.apply(stmt, parameters);
-                                if (query.substr(0, 6) === "INSERT") {
-                                    result = result.lastInsertRowid;
+                                raw = stmt.all.apply(stmt, parameters);
+                                result.raw = raw;
+                                if (Array.isArray(raw)) {
+                                    result.records = raw;
                                 }
                             }
-                            maxQueryExecutionTime = connection.options.maxQueryExecutionTime;
+                            else {
+                                raw = stmt.run.apply(stmt, parameters);
+                                result.affected = raw.changes;
+                                result.raw = raw.lastInsertRowid;
+                            }
+                            maxQueryExecutionTime = this.driver.options.maxQueryExecutionTime;
                             queryEndTime = +new Date();
                             queryExecutionTime = queryEndTime - queryStartTime;
                             if (maxQueryExecutionTime && queryExecutionTime > maxQueryExecutionTime)
                                 connection.logger.logQuerySlow(queryExecutionTime, query, parameters, this);
+                            if (!useStructuredResult) {
+                                return [2 /*return*/, result.raw];
+                            }
                             return [2 /*return*/, result];
                         }
                         catch (err) {

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.CordovaDriver = void 0;
 var tslib_1 = require("tslib");
 var AbstractSqliteDriver_1 = require("../sqlite-abstract/AbstractSqliteDriver");
 var CordovaQueryRunner_1 = require("./CordovaQueryRunner");
@@ -45,7 +46,6 @@ var CordovaDriver = /** @class */ (function (_super) {
      * Creates a query runner used to execute database queries.
      */
     CordovaDriver.prototype.createQueryRunner = function (mode) {
-        if (mode === void 0) { mode = "master"; }
         if (!this.queryRunner)
             this.queryRunner = new CordovaQueryRunner_1.CordovaQueryRunner(this);
         return this.queryRunner;
