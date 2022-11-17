@@ -1,8 +1,9 @@
 import { Driver } from "../Driver";
+import { CteCapabilities } from "../types/CteCapabilities";
 import { SqlServerQueryRunner } from "./SqlServerQueryRunner";
 import { ObjectLiteral } from "../../common/ObjectLiteral";
 import { ColumnMetadata } from "../../metadata/ColumnMetadata";
-import { Connection } from "../../connection/Connection";
+import { DataSource } from "../../data-source/DataSource";
 import { RdbmsSchemaBuilder } from "../../schema-builder/RdbmsSchemaBuilder";
 import { SqlServerConnectionOptions } from "./SqlServerConnectionOptions";
 import { MappedColumnTypes } from "../types/MappedColumnTypes";
@@ -23,7 +24,7 @@ export declare class SqlServerDriver implements Driver {
     /**
      * Connection used by driver.
      */
-    connection: Connection;
+    connection: DataSource;
     /**
      * SQL Server library.
      */
@@ -67,6 +68,10 @@ export declare class SqlServerDriver implements Driver {
      */
     treeSupport: boolean;
     /**
+     * Represent transaction support by this driver
+     */
+    transactionSupport: "simple";
+    /**
      * Gets list of supported column data types by a driver.
      *
      * @see https://docs.microsoft.com/en-us/sql/t-sql/data-types/data-types-transact-sql
@@ -98,12 +103,13 @@ export declare class SqlServerDriver implements Driver {
      * Used in the cases when length/precision/scale is not specified by user.
      */
     dataTypeDefaults: DataTypeDefaults;
+    cteCapabilities: CteCapabilities;
     /**
      * Max length allowed by MSSQL Server for aliases (identifiers).
      * @see https://docs.microsoft.com/en-us/sql/sql-server/maximum-capacity-specifications-for-sql-server
      */
     maxAliasLength: number;
-    constructor(connection: Connection);
+    constructor(connection: DataSource);
     /**
      * Performs connection to the database.
      * Based on pooling options, it can either create connection immediately,
@@ -206,7 +212,6 @@ export declare class SqlServerDriver implements Driver {
      * and returns only changed.
      */
     findChangedColumns(tableColumns: TableColumn[], columnMetadatas: ColumnMetadata[]): ColumnMetadata[];
-    private lowerDefaultValueIfNecessary;
     /**
      * Returns true if driver supports RETURNING / OUTPUT statement.
      */
@@ -238,6 +243,9 @@ export declare class SqlServerDriver implements Driver {
      * If driver dependency is not given explicitly, then try to load it via "require".
      */
     protected loadDependencies(): void;
+    protected compareColumnType(tableColumn: TableColumn, columnMetadata: ColumnMetadata): boolean;
+    protected compareColumnLength(tableColumn: TableColumn, columnMetadata: ColumnMetadata): boolean;
+    protected lowerDefaultValueIfNecessary(value: string | undefined): string | undefined;
     /**
      * Creates a new connection pool for a given database credentials.
      */

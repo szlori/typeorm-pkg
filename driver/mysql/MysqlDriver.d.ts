@@ -1,8 +1,9 @@
-import { Driver } from "../Driver";
+import { Driver, ReturningType } from "../Driver";
+import { CteCapabilities } from "../types/CteCapabilities";
 import { MysqlQueryRunner } from "./MysqlQueryRunner";
 import { ObjectLiteral } from "../../common/ObjectLiteral";
 import { ColumnMetadata } from "../../metadata/ColumnMetadata";
-import { Connection } from "../../connection/Connection";
+import { DataSource } from "../../data-source/DataSource";
 import { RdbmsSchemaBuilder } from "../../schema-builder/RdbmsSchemaBuilder";
 import { MysqlConnectionOptions } from "./MysqlConnectionOptions";
 import { MappedColumnTypes } from "../types/MappedColumnTypes";
@@ -22,7 +23,7 @@ export declare class MysqlDriver implements Driver {
     /**
      * Connection used by driver.
      */
-    connection: Connection;
+    connection: DataSource;
     /**
      * Mysql underlying library.
      */
@@ -41,6 +42,10 @@ export declare class MysqlDriver implements Driver {
      */
     options: MysqlConnectionOptions;
     /**
+     * Version of MySQL. Requires a SQL query to the DB, so it is not always set
+     */
+    version?: string;
+    /**
      * Master database used to perform all write queries.
      */
     database?: string;
@@ -53,12 +58,20 @@ export declare class MysqlDriver implements Driver {
      */
     treeSupport: boolean;
     /**
+     * Represent transaction support by this driver
+     */
+    transactionSupport: "nested";
+    /**
      * Gets list of supported column data types by a driver.
      *
      * @see https://www.tutorialspoint.com/mysql/mysql-data-types.htm
      * @see https://dev.mysql.com/doc/refman/8.0/en/data-types.html
      */
     supportedDataTypes: ColumnType[];
+    /**
+     * Returns type of upsert supported by driver if any
+     */
+    readonly supportedUpsertType = "on-duplicate-key-update";
     /**
      * Gets list of spatial column data types.
      */
@@ -98,7 +111,12 @@ export declare class MysqlDriver implements Driver {
      * @see https://dev.mysql.com/doc/refman/5.5/en/identifiers.html
      */
     maxAliasLength: number;
-    constructor(connection: Connection);
+    cteCapabilities: CteCapabilities;
+    /**
+     * Supported returning types
+     */
+    private readonly _isReturningSqlSupported;
+    constructor(connection: DataSource);
     /**
      * Performs connection to the database.
      */
@@ -198,7 +216,7 @@ export declare class MysqlDriver implements Driver {
     /**
      * Returns true if driver supports RETURNING / OUTPUT statement.
      */
-    isReturningSqlSupported(): boolean;
+    isReturningSqlSupported(returningType: ReturningType): boolean;
     /**
      * Returns true if driver supports uuid values generation on its own.
      */
@@ -231,6 +249,7 @@ export declare class MysqlDriver implements Driver {
      * Checks if "DEFAULT" values in the column metadata and in the database are equal.
      */
     protected compareDefaultValues(columnMetadataValue: string | undefined, databaseValue: string | undefined): boolean;
+    compareNullableValues(columnMetadata: ColumnMetadata, tableColumn: TableColumn): boolean;
     /**
      * If parameter is a datetime function, e.g. "CURRENT_TIMESTAMP", normalizes it.
      * Otherwise returns original input.

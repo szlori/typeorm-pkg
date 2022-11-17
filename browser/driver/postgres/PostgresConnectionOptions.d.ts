@@ -1,9 +1,9 @@
-import { BaseConnectionOptions } from "../../connection/BaseConnectionOptions";
+import { BaseDataSourceOptions } from "../../data-source/BaseDataSourceOptions";
 import { PostgresConnectionCredentialsOptions } from "./PostgresConnectionCredentialsOptions";
 /**
  * Postgres-specific connection options.
  */
-export interface PostgresConnectionOptions extends BaseConnectionOptions, PostgresConnectionCredentialsOptions {
+export interface PostgresConnectionOptions extends BaseDataSourceOptions, PostgresConnectionCredentialsOptions {
     /**
      * Database type.
      */
@@ -13,8 +13,18 @@ export interface PostgresConnectionOptions extends BaseConnectionOptions, Postgr
      */
     readonly schema?: string;
     /**
-    * A boolean determining whether to pass time values in UTC or local time. (default: true).
-    */
+     * The driver object
+     * This defaults to `require("pg")`.
+     */
+    readonly driver?: any;
+    /**
+     * The driver object
+     * This defaults to `require("pg-native")`.
+     */
+    readonly nativeDriver?: any;
+    /**
+     * A boolean determining whether to pass time values in UTC or local time. (default: false).
+     */
     readonly useUTC?: boolean;
     /**
      * Replication setup.

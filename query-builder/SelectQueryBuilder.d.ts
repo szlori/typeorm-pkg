@@ -11,14 +11,40 @@ import { QueryRunner } from "../query-runner/QueryRunner";
 import { WhereExpressionBuilder } from "./WhereExpressionBuilder";
 import { Brackets } from "./Brackets";
 import { SelectQueryBuilderOption } from "./SelectQueryBuilderOption";
+import { FindManyOptions } from "../find-options/FindManyOptions";
+import { FindOptionsSelect } from "../find-options/FindOptionsSelect";
+import { RelationMetadata } from "../metadata/RelationMetadata";
+import { FindOptionsOrder } from "../find-options/FindOptionsOrder";
+import { FindOptionsWhere } from "../find-options/FindOptionsWhere";
+import { FindOptionsRelations } from "../find-options/FindOptionsRelations";
 /**
  * Allows to build complex sql queries in a fashion way and execute those queries.
  */
-export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> implements WhereExpressionBuilder {
+export declare class SelectQueryBuilder<Entity extends ObjectLiteral> extends QueryBuilder<Entity> implements WhereExpressionBuilder {
+    readonly "@instanceof": symbol;
+    protected findOptions: FindManyOptions;
+    protected selects: string[];
+    protected joins: {
+        type: "inner" | "left";
+        alias: string;
+        parentAlias: string;
+        relationMetadata: RelationMetadata;
+        select: boolean;
+        selection: FindOptionsSelect<any> | undefined;
+    }[];
+    protected conditions: string;
+    protected orderBys: {
+        alias: string;
+        direction: "ASC" | "DESC";
+        nulls?: "NULLS FIRST" | "NULLS LAST";
+    }[];
+    protected relationMetadatas: RelationMetadata[];
+    get loadEagerRelations(): boolean | undefined;
     /**
-     * Gets generated sql query without parameters being replaced.
+     * Gets generated SQL query without parameters being replaced.
      */
     getQuery(): string;
+    setFindOptions(findOptions: FindManyOptions<Entity>): this;
     /**
      * Creates a subquery - query that can be used inside other queries.
      */
@@ -73,23 +99,23 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * Also sets a main string alias of the selection data.
      * Removes all previously set from-s.
      */
-    from<T>(entityTarget: (qb: SelectQueryBuilder<any>) => SelectQueryBuilder<any>, aliasName: string): SelectQueryBuilder<T>;
+    from<T extends ObjectLiteral>(entityTarget: (qb: SelectQueryBuilder<any>) => SelectQueryBuilder<any>, aliasName: string): SelectQueryBuilder<T>;
     /**
      * Specifies FROM which entity's table select/update/delete will be executed.
      * Also sets a main string alias of the selection data.
      * Removes all previously set from-s.
      */
-    from<T>(entityTarget: EntityTarget<T>, aliasName: string): SelectQueryBuilder<T>;
+    from<T extends ObjectLiteral>(entityTarget: EntityTarget<T>, aliasName: string): SelectQueryBuilder<T>;
     /**
      * Specifies FROM which entity's table select/update/delete will be executed.
      * Also sets a main string alias of the selection data.
      */
-    addFrom<T>(entityTarget: (qb: SelectQueryBuilder<any>) => SelectQueryBuilder<any>, aliasName: string): SelectQueryBuilder<T>;
+    addFrom<T extends ObjectLiteral>(entityTarget: (qb: SelectQueryBuilder<any>) => SelectQueryBuilder<any>, aliasName: string): SelectQueryBuilder<T>;
     /**
      * Specifies FROM which entity's table select/update/delete will be executed.
      * Also sets a main string alias of the selection data.
      */
-    addFrom<T>(entityTarget: EntityTarget<T>, aliasName: string): SelectQueryBuilder<T>;
+    addFrom<T extends ObjectLiteral>(entityTarget: EntityTarget<T>, aliasName: string): SelectQueryBuilder<T>;
     /**
      * INNER JOINs (without selection) given subquery.
      * You also need to specify an alias of the joined data.
@@ -484,13 +510,23 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      */
     skip(skip?: number): this;
     /**
+     * Set certain index to be used by the query.
+     *
+     * @param index Name of index to be used.
+     */
+    useIndex(index: string): this;
+    /**
      * Sets locking mode.
      */
     setLock(lockMode: "optimistic", lockVersion: number | Date): this;
     /**
      * Sets locking mode.
      */
-    setLock(lockMode: "pessimistic_read" | "pessimistic_write" | "dirty_read" | "pessimistic_partial_write" | "pessimistic_write_or_fail" | "for_no_key_update", lockVersion?: undefined, lockTables?: string[]): this;
+    setLock(lockMode: "pessimistic_read" | "pessimistic_write" | "dirty_read" | "pessimistic_partial_write" | "pessimistic_write_or_fail" | "for_no_key_update" | "for_key_share", lockVersion?: undefined, lockTables?: string[]): this;
+    /**
+     * Sets lock handling by adding NO WAIT or SKIP LOCKED.
+     */
+    setOnLocked(onLocked: "nowait" | "skip_locked"): this;
     /**
      * Disables the global condition of "non-deleted" for the entity with delete date columns.
      */
@@ -513,7 +549,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
     /**
      * Gets single entity returned by execution of generated query builder sql.
      */
-    getOne(): Promise<Entity | undefined>;
+    getOne(): Promise<Entity | null>;
     /**
      * Gets the first entity returned by execution of generated query builder sql or rejects the returned promise on error.
      */
@@ -579,6 +615,15 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      */
     protected createLimitOffsetExpression(): string;
     /**
+     * Creates "LOCK" part of SELECT Query after table Clause
+     * ex.
+     *  SELECT 1
+     *  FROM USER U WITH (NOLOCK)
+     *  JOIN ORDER O WITH (NOLOCK)
+     *      ON U.ID=O.OrderID
+     */
+    private createTableLockExpression;
+    /**
      * Creates "LOCK" part of SQL query.
      */
     protected createLockExpression(): string;
@@ -590,6 +635,7 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
     protected findEntityColumnSelects(aliasName: string, metadata: EntityMetadata): SelectQuery[];
     private computeCountExpression;
     protected executeCountQuery(queryRunner: QueryRunner): Promise<number>;
+    protected applyFindOptions(): void;
     /**
      * Executes sql generated by query builder and returns object with raw results and entities created from them.
      */
@@ -614,4 +660,9 @@ export declare class SelectQueryBuilder<Entity> extends QueryBuilder<Entity> imp
      * Creates a query builder used to execute sql queries inside this query builder.
      */
     protected obtainQueryRunner(): QueryRunner;
+    protected buildSelect(select: FindOptionsSelect<any>, metadata: EntityMetadata, alias: string, embedPrefix?: string): void;
+    protected buildRelations(relations: FindOptionsRelations<any>, selection: FindOptionsSelect<any> | undefined, metadata: EntityMetadata, alias: string, embedPrefix?: string): void;
+    protected buildEagerRelations(relations: FindOptionsRelations<any>, selection: FindOptionsSelect<any> | undefined, metadata: EntityMetadata, alias: string, embedPrefix?: string): void;
+    protected buildOrder(order: FindOptionsOrder<any>, metadata: EntityMetadata, alias: string, embedPrefix?: string): void;
+    protected buildWhere(where: FindOptionsWhere<any>, metadata: EntityMetadata, alias: string, embedPrefix?: string): string;
 }

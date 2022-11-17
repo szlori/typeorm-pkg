@@ -2,16 +2,19 @@ import { QueryRunner } from "../query-runner/QueryRunner";
 import { ColumnMetadata } from "../metadata/ColumnMetadata";
 import { ObjectLiteral } from "../common/ObjectLiteral";
 import { ColumnType } from "./types/ColumnTypes";
+import { CteCapabilities } from "./types/CteCapabilities";
 import { MappedColumnTypes } from "./types/MappedColumnTypes";
 import { SchemaBuilder } from "../schema-builder/SchemaBuilder";
 import { DataTypeDefaults } from "./types/DataTypeDefaults";
-import { BaseConnectionOptions } from "../connection/BaseConnectionOptions";
+import { BaseDataSourceOptions } from "../data-source/BaseDataSourceOptions";
 import { TableColumn } from "../schema-builder/table/TableColumn";
 import { EntityMetadata } from "../metadata/EntityMetadata";
 import { ReplicationMode } from "./types/ReplicationMode";
 import { Table } from "../schema-builder/table/Table";
 import { View } from "../schema-builder/view/View";
 import { TableForeignKey } from "../schema-builder/table/TableForeignKey";
+import { UpsertType } from "./types/UpsertType";
+export declare type ReturningType = "insert" | "update" | "delete";
 /**
  * Driver organizes TypeORM communication with specific database management system.
  */
@@ -19,7 +22,11 @@ export interface Driver {
     /**
      * Connection options.
      */
-    options: BaseConnectionOptions;
+    options: BaseDataSourceOptions;
+    /**
+     * Database version/release. Often requires a SQL query to the DB, so it is not always set
+     */
+    version?: string;
     /**
      * Database name used to perform all write queries.
      *
@@ -39,9 +46,17 @@ export interface Driver {
      */
     treeSupport: boolean;
     /**
+     * Represent transaction support by this driver
+     */
+    transactionSupport: "simple" | "nested" | "none";
+    /**
      * Gets list of supported column data types by a driver.
      */
     supportedDataTypes: ColumnType[];
+    /**
+     * Returns type of upsert supported by driver if any
+     */
+    supportedUpsertType?: UpsertType;
     /**
      * Default values of length, precision and scale depends on column data type.
      * Used in the cases when length/precision/scale is not specified by user.
@@ -72,6 +87,7 @@ export interface Driver {
      * Max length allowed by the DBMS for aliases (execution of queries).
      */
     maxAliasLength?: number;
+    cteCapabilities: CteCapabilities;
     /**
      * Performs connection to the database.
      * Depend on driver type it may create a connection pool.
@@ -175,7 +191,7 @@ export interface Driver {
     /**
      * Returns true if driver supports RETURNING / OUTPUT statement.
      */
-    isReturningSqlSupported(): boolean;
+    isReturningSqlSupported(returningType: ReturningType): boolean;
     /**
      * Returns true if driver supports uuid values generation on its own.
      */

@@ -7,7 +7,7 @@ import { TableForeignKey } from "../../schema-builder/table/TableForeignKey";
 import { TableIndex } from "../../schema-builder/table/TableIndex";
 import { View } from "../../schema-builder/view/View";
 import { AggregationCursor, BulkWriteOpResultObject, ChangeStream, ChangeStreamOptions, Code, Collection, CollectionAggregationOptions, CollectionBulkWriteOptions, CollectionInsertManyOptions, CollectionInsertOneOptions, CollectionOptions, CollStats, CommandCursor, Cursor, DeleteWriteOpResultObject, FindAndModifyWriteOpResultObject, FindOneAndReplaceOption, GeoHaystackSearchOptions, GeoNearOptions, InsertOneWriteOpResult, InsertWriteOpResult, MapReduceOptions, MongoClient, MongoCountPreferences, MongodbIndexOptions, OrderedBulkOperation, ParallelCollectionScanOptions, ReadPreference, ReplaceOneOptions, UnorderedBulkOperation, UpdateWriteOpResult } from "./typings";
-import { Connection } from "../../connection/Connection";
+import { DataSource } from "../../data-source/DataSource";
 import { ReadStream } from "../../platform/PlatformTools";
 import { MongoEntityManager } from "../../entity-manager/MongoEntityManager";
 import { SqlInMemory } from "../SqlInMemory";
@@ -15,6 +15,7 @@ import { TableUnique } from "../../schema-builder/table/TableUnique";
 import { Broadcaster } from "../../subscriber/Broadcaster";
 import { TableCheck } from "../../schema-builder/table/TableCheck";
 import { TableExclusion } from "../../schema-builder/table/TableExclusion";
+import { ReplicationMode } from "../types/ReplicationMode";
 /**
  * Runs queries on a single MongoDB connection.
  */
@@ -22,7 +23,7 @@ export declare class MongoQueryRunner implements QueryRunner {
     /**
      * Connection used by this query runner.
      */
-    connection: Connection;
+    connection: DataSource;
     /**
      * Broadcaster used on this query runner to broadcast entity events.
      */
@@ -59,7 +60,15 @@ export declare class MongoQueryRunner implements QueryRunner {
      * Real database connection from a connection pool used to perform queries.
      */
     databaseConnection: MongoClient;
-    constructor(connection: Connection, databaseConnection: MongoClient);
+    constructor(connection: DataSource, databaseConnection: MongoClient);
+    /**
+     * Called before migrations are run.
+     */
+    beforeMigration(): Promise<void>;
+    /**
+     * Called after migrations are run.
+     */
+    afterMigration(): Promise<void>;
     /**
      * Creates a cursor for a query that can be used to iterate over results from MongoDB.
      */
@@ -316,6 +325,7 @@ export declare class MongoQueryRunner implements QueryRunner {
      * Loads all views (with given names) from the database and creates a Table from them.
      */
     getViews(collectionNames: string[]): Promise<View[]>;
+    getReplicationMode(): ReplicationMode;
     /**
      * Checks if database with the given name exist.
      */
