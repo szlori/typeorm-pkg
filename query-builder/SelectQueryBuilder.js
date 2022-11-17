@@ -1651,18 +1651,10 @@ class SelectQueryBuilder extends QueryBuilder_1.QueryBuilder {
                 this.select(this.selects);
             }
             this.selects = [];
-            if (this.findOptions.relations ||
-                this.findOptions.loadEagerRelations !== false) {
-                let relations = Array.isArray(this.findOptions.relations)
+            if (this.findOptions.relations) {
+                const relations = Array.isArray(this.findOptions.relations)
                     ? OrmUtils_1.OrmUtils.propertyPathsToTruthyObject(this.findOptions.relations)
                     : this.findOptions.relations;
-                if (this.findOptions.loadEagerRelations !== false &&
-                    this.expressionMap.mainAlias.metadata.eagerRelations
-                        .length > 0) {
-                    relations =
-                        FindOptionsUtils_1.FindOptionsUtils.mergeFindOptionsRelationsWithEagerRelations(relations !== null && relations !== void 0 ? relations : {}, this.expressionMap.mainAlias.metadata
-                            .eagerRelations);
-                }
                 this.buildRelations(relations, typeof this.findOptions.select === "object"
                     ? this.findOptions.select
                     : undefined, this.expressionMap.mainAlias.metadata, this.expressionMap.mainAlias.name);
@@ -1806,7 +1798,7 @@ class SelectQueryBuilder extends QueryBuilder_1.QueryBuilder {
                 this.loadAllRelationIds(this.findOptions.loadRelationIds);
             }
             if (this.findOptions.loadEagerRelations !== false &&
-                this.findOptions.relationLoadStrategy === "join") {
+                this.expressionMap.relationLoadStrategy === "join") {
                 FindOptionsUtils_1.FindOptionsUtils.joinEagerRelations(this, this.expressionMap.mainAlias.name, this.expressionMap.mainAlias.metadata);
             }
             if (this.findOptions.transaction === true) {
@@ -2219,7 +2211,7 @@ class SelectQueryBuilder extends QueryBuilder_1.QueryBuilder {
         if (!relations)
             return;
         Object.keys(relations).forEach((relationName) => {
-            const relationValue = relations[relationName];
+            let relationValue = relations[relationName];
             const propertyPath = embedPrefix
                 ? embedPrefix + "." + relationName
                 : relationName;
@@ -2237,6 +2229,10 @@ class SelectQueryBuilder extends QueryBuilder_1.QueryBuilder {
                 joinAlias = DriverUtils_1.DriverUtils.buildAlias(this.connection.driver, { joiner: "__" }, alias, joinAlias);
                 if (relationValue === true ||
                     typeof relationValue === "object") {
+                    // add the eager relations of the eager relation
+                    if (relation.inverseEntityMetadata.eagerRelations.length > 0) {
+                        relationValue = FindOptionsUtils_1.FindOptionsUtils.mergeFindOptionsRelationsWithEagerRelations(relationValue === true ? {} : relationValue, relation.inverseEntityMetadata.eagerRelations);
+                    }
                     relation.inverseEntityMetadata.eagerRelations.forEach((eagerRelation) => {
                         let eagerRelationJoinAlias = joinAlias +
                             "_" +
