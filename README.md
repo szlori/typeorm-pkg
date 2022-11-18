@@ -38,9 +38,10 @@ TypeORM is highly influenced by other ORMs, such as [Hibernate](http://hibernate
 
 ## Patch
 
-Patch `-patch.2` includes patches for typeORM issues:
+Patch `-patch.1` includes patches for typeORM issues:
 - [#6640](https://github.com/typeorm/typeorm/issues/6640): order by json field with join and pagination
-- [#9006](https://github.com/typeorm/typeorm/issues/9006) but not exactly: recursive load eager relations for `relations` field(0.3.0 regression)
+- [#9006](https://github.com/typeorm/typeorm/issues/9006) but not exactly: recursive load eager relations for relations field(0.3.0 regression)
+- [#9085](https://github.com/typeorm/typeorm/issues/9085): specify output dir in configuration for migrations
 
 ## Features
 

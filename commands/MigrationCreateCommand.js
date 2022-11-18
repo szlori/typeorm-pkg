@@ -17,6 +17,11 @@ class MigrationCreateCommand {
     }
     builder(args) {
         return args
+            .option("dataSource", {
+            alias: "d",
+            type: "string",
+            describe: "Path to the file where your DataSource instance is defined.",
+        })
             .option("o", {
             alias: "outputJs",
             type: "boolean",
@@ -31,11 +36,16 @@ class MigrationCreateCommand {
         });
     }
     async handler(args) {
+        let dataSource = undefined;
         try {
+            if (args.dataSource) {
+                dataSource = await CommandUtils_1.CommandUtils.loadDataSource(path_1.default.resolve(process.cwd(), args.dataSource));
+            }
+            const migrationsDir = (dataSource === null || dataSource === void 0 ? void 0 : dataSource.options.migrationsOutDir) || "";
             const timestamp = CommandUtils_1.CommandUtils.getTimestamp(args.timestamp);
             const inputPath = args.path.startsWith("/")
                 ? args.path
-                : path_1.default.resolve(process.cwd(), args.path);
+                : path_1.default.resolve(process.cwd(), migrationsDir, args.path);
             const filename = path_1.default.basename(inputPath);
             const fullPath = path_1.default.dirname(inputPath) + "/" + timestamp + "-" + filename;
             const fileContent = args.outputJs

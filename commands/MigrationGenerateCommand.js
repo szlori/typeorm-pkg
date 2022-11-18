@@ -59,10 +59,6 @@ class MigrationGenerateCommand {
     async handler(args) {
         const timestamp = CommandUtils_1.CommandUtils.getTimestamp(args.timestamp);
         const extension = args.outputJs ? ".js" : ".ts";
-        const fullPath = args.path.startsWith("/")
-            ? args.path
-            : path.resolve(process_1.default.cwd(), args.path);
-        const filename = timestamp + "-" + path.basename(fullPath) + extension;
         let dataSource = undefined;
         try {
             dataSource = await CommandUtils_1.CommandUtils.loadDataSource(path.resolve(process_1.default.cwd(), args.dataSource));
@@ -73,6 +69,11 @@ class MigrationGenerateCommand {
                 logging: false,
             });
             await dataSource.initialize();
+            const migrationsDir = (dataSource === null || dataSource === void 0 ? void 0 : dataSource.options.migrationsOutDir) || "";
+            const fullPath = args.path.startsWith("/")
+                ? args.path
+                : path.resolve(process_1.default.cwd(), migrationsDir, args.path);
+            const filename = timestamp + "-" + path.basename(fullPath) + extension;
             const upSqls = [], downSqls = [];
             try {
                 const sqlInMemory = await dataSource.driver

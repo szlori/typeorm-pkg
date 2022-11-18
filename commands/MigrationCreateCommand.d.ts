@@ -6,6 +6,8 @@ export declare class MigrationCreateCommand implements yargs.CommandModule {
     command: string;
     describe: string;
     builder(args: yargs.Argv): yargs.Argv<{
+        dataSource: string | undefined;
+    } & {
         o: boolean;
     } & {
         t: boolean;
